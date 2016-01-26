@@ -1,6 +1,10 @@
 
+*.asv
 *.bmp
+*.gif
 *.jpg
 *.m~
 *.mat
+*.pdf
+*.swp
 
