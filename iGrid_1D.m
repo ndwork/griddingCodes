@@ -1,5 +1,5 @@
 
-function kTraj = iGrid_1D( data, traj, varargin )
+function fftTraj = iGrid_1D( data, traj, varargin )
   % k = iGrid_1D( data, traj, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % MRI encoding with Inverse Gridding
@@ -17,10 +17,10 @@ function kTraj = iGrid_1D( data, traj, varargin )
   %   nC is the number of points to sample the convolution kernel
   %
   % Written by Nicholas Dwork (c) 2015
-  % Based on Beatty et. al., IEEE TMI, 2005
+  % Based on EE369C notes by John Pauly and Beatty et. al., IEEE TMI, 2005
 
-  defaultAlpha = 1.25;
-  defaultW = 6;
+  defaultAlpha = 1.5;
+  defaultW = 8;
   defaultNc = 500;
   checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
   p = inputParser;
@@ -34,30 +34,27 @@ function kTraj = iGrid_1D( data, traj, varargin )
 
   nData = numel(data);
   nGrid = ceil( nData * alpha );
+  if mod(nData,2)==0
+    minY = floor( nGrid/2 - nData/2 + 1 );
+  else
+    minY = ceil( nGrid/2 - nData/2 + 1 );
+  end
   padded = zeros( nGrid, 1 );
-  minY = ceil( nGrid/2 - nData/2 + 1 );
   padded( minY : minY+nData-1 ) = data;
 
+  % Make the Kaiser Bessel convolution kernel
+  G = nGrid;
+  [kC,C,c1D,kw] = makeKbKernel( G, nGrid, alpha, W, nC );
 
   % Pre-emphasize the image
-  beta = pi * sqrt( W*W/(alpha*alpha) * (alpha-0.5)^2 - 0.8 );
-  G = nGrid;
-  kw = W/G;
-  y = (1:nGrid) - ceil((nGrid+1)/2);
-  tmp = transpose( sqrt( (pi*kw*y).^2 - beta*beta ) );
-  c = kw * sinc(tmp/pi);
-  preEmphasized = padded ./ c;
+  preEmphasized = padded ./ c1D';
+
   fftData = 1/nGrid * fftshift( fft( ifftshift(preEmphasized) ) );
     % Divide by nGrid to account for fft of convolution
 
-  % Make the convolution kernel
-  kC = linspace(0, 0.5*kw, nC)';
-  C = besseli( 0, beta * sqrt( 1 - ( 2*kC/kw ).^2 ) );
-
   gridKs = size2fftCoordinates( nGrid );
-
   nTraj = numel(traj);
-  kTraj = zeros( nTraj, 1 );
+  fftTraj = zeros( nTraj, 1 );
   kDistThresh = 0.5*kw;
   LTraj = traj - 1;
   UTraj = traj + 1;
@@ -65,24 +62,24 @@ function kTraj = iGrid_1D( data, traj, varargin )
     kDists = abs( traj(trajIndx) - gridKs );
     shortDistIndxs = find( kDists < kDistThresh );
     shortDists = kDists( shortDistIndxs );
-    CVals = interp1( kC, C, shortDists, 'linear', 0 )';
+    CVals = interp1( kC, C, shortDists, 'linear', 0 );
     kVals = fftData( shortDistIndxs );
-    kTraj(trajIndx) = kTraj(trajIndx) + sum( kVals .* CVals );
+    fftTraj(trajIndx) = fftTraj(trajIndx) + sum( kVals .* CVals );
 
     % LTraj and UTraj are used to accomplish circular convolution
     LkDists = abs( LTraj(trajIndx) - gridKs );
     LShortDistIndxs = find( LkDists < kDistThresh );
     LShortDists = LkDists( LShortDistIndxs );
-    LCVals = interp1( kC, C, LShortDists, 'linear', 0 )';
+    LCVals = interp1( kC, C, LShortDists, 'linear', 0 );
     LKVals = fftData( LShortDistIndxs );
-    kTraj(trajIndx) = kTraj(trajIndx) + sum( LKVals .* LCVals );
+    fftTraj(trajIndx) = fftTraj(trajIndx) + sum( LKVals .* LCVals );
 
     UkDists = abs( UTraj(trajIndx) - gridKs );
     UShortDistIndxs = find( UkDists < kDistThresh );
     UShortDists = UkDists( UShortDistIndxs );
-    UCVals = interp1( kC, C, UShortDists, 'linear', 0 )';
+    UCVals = interp1( kC, C, UShortDists, 'linear', 0 );
     UKVals = fftData( UShortDistIndxs );
-    kTraj(trajIndx) = kTraj(trajIndx) + sum( UKVals .* UCVals );
+    fftTraj(trajIndx) = fftTraj(trajIndx) + sum( UKVals .* UCVals );
   end
 
 end

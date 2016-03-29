@@ -12,46 +12,64 @@ function testModules
   data = transpose( data ./ max(data) );
   nData = numel(data);
   fftData = fftshift( fft( ifftshift( data ) ) );
-  traj = size2fftCoordinates( numel(fftData) );
-  out = iGridT( fftData, traj, nData, 'alpha', 1.5, 'W', 6 );
+  kTraj = size2fftCoordinates( numel(fftData) );
+  out = iGridT( fftData, kTraj, nData, 'alpha', 1.5, 'W', 8 );
   error = norm( out - data, 2 ) / norm( data, 2 );
   disp([ 'iGridT_1D error: ', num2str(error) ]);
 
 
-  %% Test iGridT_2D
-  %  Test with Fourier Transform of known 2D values
-  imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
-  img = double( imread( imgFile ) );
-  img = img(1:5:end,1:5:end);
-  fftImg = fftshift( fft2( ifftshift( img ) ) );
-  ks = size2fftCoordinates( size( fftImg ) );
-  ky=ks{1};  kx=ks{2};
-  [kx,ky] = meshgrid( kx, ky );
-  traj = zeros( numel(img), 2 );
-  traj(:,1) = ky(:);
-  traj(:,2) = kx(:);
-  out = iGridT( fftImg(:), traj, size(img), 'alpha', 1.5, 'W', 10 );
-  figure; imshow(imresize(img,3,'nearest'),[0 255]); title('origImg');
-  figure; imshow(imresize(out,3,'nearest'),[0 255]); title('out');
-  error = norm( out(:) - img(:), 2 ) / norm( img(:), 2 );
-  disp([ 'iGridT_2D error: ', num2str(error) ]);
-
-
   %% Test iGrid_1D
   nPts = 100;
-  nKPts = nPts;
-  rectWidth = 30;
+  rectWidth = 31;
   dataCoords = (0:(nPts-1)) - ceil((nPts-1)/2);
+  rect = double( abs(dataCoords) <= rectWidth/2 )';
 
-  rect = double( abs(dataCoords) < rectWidth/2 );
-  %kTraj = rand( nKPts, 1 ) - 0.5;
+  %kTraj = rand( nPts, 1 ) - 0.5;
   dk = 1/nPts;
   kTraj = -0.5 : dk : 0.5-dk;
   trueFourierValues = rectWidth .* sinc( rectWidth .* kTraj );
-  gridFourierValues = iGrid_1D( rect, kTraj, 'alpha', 1.5, 'W', 8 );
-  error = norm( trueFourierValues(:) - gridFourierValues(:), 2 ) / ...
+  iGridFourierValues = iGrid_1D( rect, kTraj, 'alpha', 1.5, 'W', 8 );
+  error = norm( trueFourierValues(:) - iGridFourierValues(:), 2 ) / ...
           norm( trueFourierValues, 2 );
   disp([ 'iGrid_1D error: ', num2str(error) ]);
+
+
+  %% Make sure iGrid_1D and iGridT_1D are adjoints
+  %kTraj = rand( nPts, 1 ) - 0.5;
+  dk = 1/nPts;
+  kTraj = -0.5 : dk : 0.5-dk;
+  x = rand( nPts, 1 );
+  y = rand( nPts, 1 );
+  Ax = iGrid_1D( x, kTraj );
+  innerProd1 = sum( Ax .* y );
+  ATy = iGridT_1D( y, kTraj, nPts );
+  innerProd2 = sum( x .* ATy );
+  error = abs( innerProd1 - innerProd2 );
+  disp([ 'iGrid/iGridT 1D Adjointness error:  ', num2str(error) ]);
+
+
+
+%   %% Test iGridT_2D
+%   %  Test with Fourier Transform of known 2D values
+%   imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
+%   img = double( imread( imgFile ) );
+%   img = img(1:5:end,1:5:end);
+%   fftImg = fftshift( fft2( ifftshift( img ) ) );
+%   ks = size2fftCoordinates( size( fftImg ) );
+%   ky=ks{1};  kx=ks{2};
+%   [kx,ky] = meshgrid( kx, ky );
+%   traj = zeros( numel(img), 2 );
+%   traj(:,1) = ky(:);
+%   traj(:,2) = kx(:);
+%   out = iGridT( fftImg(:), traj, size(img), 'alpha', 1.5, 'W', 8 );
+%   figure; imshow(imresize(img,3,'nearest'),[0 25]); title('origImg');
+%   figure; imshow(imresize(out,3,'nearest'),[0 25]); title('out');
+%   error = norm( out(:) - img(:), 2 ) / norm( img(:), 2 );
+%   disp([ 'iGridT_2D error: ', num2str(error) ]);
+
+
+
+
 
 
   %% Test iGrid_2D
@@ -63,7 +81,6 @@ function testModules
   nPts = 512;
   squareWidth = 2/100;
   kTraj = rand( nKPts, 2 ) - 0.5;
-kTraj = [0 0];
   imgCoords = (0:(nPts-1)) - ceil(nPts/2);
   [x,y] = meshgrid( imgCoords, imgCoords );
   p = 1/(squareWidth*0.5);

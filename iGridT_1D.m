@@ -19,7 +19,7 @@ function out = iGridT_1D( k, traj, N, varargin )
   %
   % Written by Nicholas Dwork (c) 2015
   % Based on EE369C notes written by John Pauly
-  
+
   defaultAlpha = 1.5;
   defaultW = 8;
   defaultNc = 500;
@@ -35,12 +35,9 @@ function out = iGridT_1D( k, traj, N, varargin )
 
   nGrid = ceil( N * alpha );
 
-  % Make the convolution kernel
+  % Make the Kaiser Bessel convolution kernel
   G = nGrid;
-  kw = W/G;
-  beta = pi * sqrt( W*W/(alpha*alpha) * (alpha-0.5)^2 - 0.8 );
-  kC = linspace(0, 0.5*kw, nC);
-  C = 1/kw * besseli( 0, beta * sqrt( 1 - ( 2*kC/kw ).^2 ) );
+  [kC,C,c1D,kw] = makeKbKernel( G, N, alpha, W, nC );
 
   gridKs = size2fftCoordinates( nGrid );
 
@@ -80,11 +77,6 @@ function out = iGridT_1D( k, traj, N, varargin )
   extracted = cropData( data, N );
 
   % Perform deapodization
-  [y,x] = size2imgCoordinates( size( extracted ) );
-  [x,y] = meshgrid( x, y );
-  r = sqrt( x.*x + y.*y );
-  tmp = sqrt( (pi*kw*r).^2 - beta*beta );
-  c1D = sinc( tmp / pi );
-  out = extracted ./ c1D;
+  out = extracted ./ transpose(c1D);
 end
 
