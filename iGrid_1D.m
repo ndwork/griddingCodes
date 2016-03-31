@@ -69,30 +69,23 @@ function F = iGrid_1D_v2( data, traj, varargin )
     F(trajIndx) = F(trajIndx) + sum( kVals .* CVals );
   end
 
-  LTraj = traj - 1;
-  LTrajIndxs = find( LTraj > -0.5-kw/2 );
-  LTraj = LTraj( LTrajIndxs );
-	for i=1:numel(LTraj)
-    trajIndx = LTrajIndxs(i);
-    LkDists = abs( LTraj(i) - gridKs );
-    LShortDistIndxs = find( LkDists < kDistThresh );
-    LShortDists = LkDists( LShortDistIndxs );
-    LCVals = interp1( kC, C, LShortDists, 'linear', 0 );
-    LKVals = fftData( LShortDistIndxs );
-    F(trajIndx) = F(trajIndx) + sum( LKVals .* LCVals );
-  end
-
-  UTraj = traj + 1;
-  UTrajIndxs = find( UTraj <= 0.5+kw/2 );
-  UTraj = UTraj( UTrajIndxs );
-  for i=1:numel(UTraj)
-    trajIndx = UTrajIndxs(i);
-    UkDists = abs( UTraj(i) - gridKs );
-    UShortDistIndxs = find( UkDists < kDistThresh );
-    UShortDists = UkDists( UShortDistIndxs );
-    UCVals = interp1( kC, C, UShortDists, 'linear', 0 );
-    UKVals = fftData( UShortDistIndxs );
-    F(trajIndx) = F(trajIndx) + sum( UKVals .* UCVals );
+  for alt=-1:2:1
+    NewTraj = traj + alt;
+    if alt < 0
+      NewTrajIndxs = find( NewTraj > -0.5-kw/2 );
+    else
+      NewTrajIndxs = find( NewTraj < 0.5+kw/2 );
+    end
+    NewTraj = NewTraj( NewTrajIndxs );
+    for i=1:numel(NewTraj)
+      trajIndx = NewTrajIndxs(i);
+      NewkDists = abs( NewTraj(i) - gridKs );
+      NewShortDistIndxs = find( NewkDists < kDistThresh );
+      NewShortDists = NewkDists( NewShortDistIndxs );
+      NewCVals = interp1( kC, C, NewShortDists, 'linear', 0 );
+      NewKVals = fftData( NewShortDistIndxs );
+      F(trajIndx) = F(trajIndx) + sum( NewKVals .* NewCVals );
+    end
   end
 
 end
