@@ -34,7 +34,11 @@ function [kC,C,c,kw] = makeKbKernel( G, N, varargin )
   beta = pi * sqrt( W*W/(alpha*alpha) * (alpha-0.5)^2 - 0.8 );
   C = 1/kw * besseli( 0, beta * sqrt( 1 - ( 2*kC/kw ).^2 ) );
 
+  maxC = max( C );
+  C = C / maxC;
+  
   x = size2imgCoordinates( N );
   tmp = sqrt( (pi*kw*x).^2 - beta*beta );
   c = sinc( tmp / pi );
+  c = c / maxC;
 end

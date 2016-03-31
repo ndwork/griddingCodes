@@ -1,6 +1,6 @@
 
-function out = iGridT_2D( k, traj, N, varargin )
-  % out = iGridT_2D( k, traj, N, [ 'alpha', alpha, 'W', W, 'nC', nC,
+function out = iGridT_2D( F, traj, N, varargin )
+  % out = iGridT_2D( F, traj, N, [ 'alpha', alpha, 'W', W, 'nC', nC,
   %   'verbose', verbose ] )
   %
   % Gridding (without density correction) is the adjoint of MRI encoding
@@ -8,7 +8,7 @@ function out = iGridT_2D( k, traj, N, varargin )
   % inverse gridding to the input data.
   %
   % Inputs:
-  %   k is a 1D array of M elements specifying the k-space data values
+  %   F is a 1D array of M elements specifying the k-space data values
   %   traj is a Mx2 array specifying the k-space trajectory.
   %     The first/second column is kx/ky
   %     The units are normalized to [-0.5,0.5).
@@ -47,102 +47,95 @@ function out = iGridT_2D( k, traj, N, varargin )
   nC = p.Results.nC;
   verbose = p.Results.verbose;
 
-  nKy = ceil( Ny * alpha );
-  nKx = ceil( Nx * alpha );
+  %nGridY = ceil( Ny * alpha );
+  %nGridX = ceil( Nx * alpha );
+  nGridY = Ny;
+  nGridX = Nx;
 
   %% Make the convolution kernel
-  Gy = nKy;
+  Gy = nGridY;
   [kCy,Cy,cImgY,kwy] = makeKbKernel( Gy, Ny, alpha, W, nC );
-  Gx = nKx;
+  Gx = nGridX;
   [kCx,Cx,cImgX,kwx] = makeKbKernel( Gx, Nx, alpha, W, nC );
 
-  gridKs = size2fftCoordinates([ nKy nKx ]);
+  gridKs = size2fftCoordinates([ nGridY nGridX ]);
   gridKy=gridKs{1};  gridKx=gridKs{2};
   [gridKx,gridKy] = meshgrid(gridKx,gridKy);
 
+  % Perform Adjoint of Circular Convolution
   nTraj = size(traj,1);
   kDistThreshY = 0.5*kwy;
   kDistThreshX = 0.5*kwx;
-  fftGridded = zeros( nKy, nKx );
-  UN_Traj = traj + [  ones(nTraj,1) zeros(nTraj,1) ];
-  LN_Traj = traj + [ -ones(nTraj,1) zeros(nTraj,1) ];
-  NU_Traj = traj + [  zeros(nTraj,1)  ones(nTraj,1) ];
-  NL_Traj = traj + [  zeros(nTraj,1) -ones(nTraj,1) ];
+  fftGridded = zeros( nGridY, nGridX );
+  UN_traj = traj + [  ones(nTraj,1) zeros(nTraj,1) ];
+  LN_traj = traj + [ -ones(nTraj,1) zeros(nTraj,1) ];
+  NU_traj = traj + [  zeros(nTraj,1)  ones(nTraj,1) ];
+  NL_traj = traj + [  zeros(nTraj,1) -ones(nTraj,1) ];
   for trajIndx=1:nTraj
     if verbose==true && mod(trajIndx,1000)==0
       fprintf('Working on %i of %i\n', trajIndx, nTraj );
     end
+
     distsKy = abs( traj(trajIndx,1) - gridKy );
     distsKx = abs( traj(trajIndx,2) - gridKx );
     shortDistIndxs = find( distsKy < kDistThreshY & distsKx < kDistThreshX );
     shortDistsKy = distsKy( shortDistIndxs );
     shortDistsKx = distsKx( shortDistIndxs );
-
     CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
     CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
+    fftGridded(shortDistIndxs) = fftGridded(shortDistIndxs) + ...
+      F(trajIndx) * ( CValsY .* CValsX );
 
-    fftGridded( shortDistIndxs ) = fftGridded( shortDistIndxs ) + ...
-      k(trajIndx) .* ( CValsY .* CValsX );
+    UN_distsKy = abs( UN_traj(trajIndx,1) - gridKy );
+    UN_distsKx = abs( UN_traj(trajIndx,2) - gridKx );
+    UN_shortDistIndxs = find( UN_distsKy < kDistThreshY & UN_distsKx < kDistThreshX );
+    UN_shortDistsKy = UN_distsKy( UN_shortDistIndxs );
+    UN_shortDistsKx = UN_distsKx( UN_shortDistIndxs );
+    UN_CValsY = interp1( kCy, Cy, UN_shortDistsKy, 'linear', 0 );
+    UN_CValsX = interp1( kCx, Cx, UN_shortDistsKx, 'linear', 0 );
+    fftGridded(UN_shortDistIndxs) = fftGridded(UN_shortDistIndxs) + ...
+      F(trajIndx) * ( UN_CValsY .* UN_CValsX );
 
-    % Implement circular convolution
-    UN_kyDists = abs( UN_Traj(trajIndx,1) - gridKy );    % Upper -  Normal
-    UN_kxDists = abs( UN_Traj(trajIndx,2) - gridKx );
-    UN_shortDistIndxs = find( UN_kyDists < kDistThreshY & UN_kxDists < kDistThreshX );
-    if numel( UN_shortDistIndxs ) > 0
-      UN_shortDistsKy = UN_kyDists( UN_shortDistIndxs );
-      UN_shortDistsKx = UN_kxDists( UN_shortDistIndxs );
-      UN_CValsY = interp1( kCy, Cy, UN_shortDistsKy, 'linear', 0 );
-      UN_CValsX = interp1( kCx, Cx, UN_shortDistsKx, 'linear', 0 );
-      fftGridded( UN_shortDistIndxs ) = fftGridded( UN_shortDistIndxs ) + ...
-        k(trajIndx) .* (UN_CValsY .* UN_CValsX);
-    end
+    LN_distsKy = abs( LN_traj(trajIndx,1) - gridKy );
+    LN_distsKx = abs( LN_traj(trajIndx,2) - gridKx );
+    LN_shortDistIndxs = find( LN_distsKy < kDistThreshY & LN_distsKx < kDistThreshX );
+    LN_shortDistsKy = LN_distsKy( LN_shortDistIndxs );
+    LN_shortDistsKx = LN_distsKx( LN_shortDistIndxs );
+    LN_CValsY = interp1( kCy, Cy, LN_shortDistsKy, 'linear', 0 );
+    LN_CValsX = interp1( kCx, Cx, LN_shortDistsKx, 'linear', 0 );
+    fftGridded(LN_shortDistIndxs) = fftGridded(LN_shortDistIndxs) + ...
+      F(trajIndx) * ( LN_CValsY .* LN_CValsX );
 
-    LN_kyDists = abs( LN_Traj(trajIndx,1) - gridKy );    % Lower -  Normal
-    LN_kxDists = abs( LN_Traj(trajIndx,2) - gridKx );
-    LN_shortDistIndxs = find( LN_kyDists < kDistThreshY & LN_kxDists < kDistThreshX );
-    if numel( LN_shortDistIndxs ) > 0
-      LN_shortDistsKy = LN_kyDists( LN_shortDistIndxs );
-      LN_shortDistsKx = LN_kxDists( LN_shortDistIndxs );
-      LN_CValsY = interp1( kCy, Cy, LN_shortDistsKy, 'linear', 0 );
-      LN_CValsX = interp1( kCx, Cx, LN_shortDistsKx, 'linear', 0 );
-      fftGridded( LN_shortDistIndxs ) = fftGridded( LN_shortDistIndxs ) + ...
-        k(trajIndx) .* (LN_CValsY .* LN_CValsX);
-    end
+    NU_distsKy = abs( NU_traj(trajIndx,1) - gridKy );
+    NU_distsKx = abs( NU_traj(trajIndx,2) - gridKx );
+    NU_shortDistIndxs = find( NU_distsKy < kDistThreshY & NU_distsKx < kDistThreshX );
+    NU_shortDistsKy = NU_distsKy( NU_shortDistIndxs );
+    NU_shortDistsKx = NU_distsKx( NU_shortDistIndxs );
+    NU_CValsY = interp1( kCy, Cy, NU_shortDistsKy, 'linear', 0 );
+    NU_CValsX = interp1( kCx, Cx, NU_shortDistsKx, 'linear', 0 );
+    fftGridded(NU_shortDistIndxs) = fftGridded(NU_shortDistIndxs) + ...
+      F(trajIndx) * ( NU_CValsY .* NU_CValsX );
 
-    NU_kyDists = abs( NU_Traj(trajIndx,1) - gridKy );    % Normal - Upper
-    NU_kxDists = abs( NU_Traj(trajIndx,2) - gridKx );
-    NU_shortDistIndxs = find( NU_kyDists < kDistThreshY & NU_kxDists < kDistThreshX );
-    if numel( NU_shortDistIndxs ) > 0
-      NU_shortDistsKy = NU_kyDists( NU_shortDistIndxs );
-      NU_shortDistsKx = NU_kxDists( NU_shortDistIndxs );
-      NU_CValsY = interp1( kCy, Cy, NU_shortDistsKy, 'linear', 0 );
-      NU_CValsX = interp1( kCx, Cx, NU_shortDistsKx, 'linear', 0 );
-      fftGridded( NU_shortDistIndxs ) = fftGridded( NU_shortDistIndxs ) + ...
-        k(trajIndx) .* (NU_CValsY .* NU_CValsX);
-    end
-
-    NL_kyDists = abs( NL_Traj(trajIndx,1) - gridKy );    % Normal - Lower
-    NL_kxDists = abs( NL_Traj(trajIndx,2) - gridKx );
-    NL_shortDistIndxs = find( NL_kyDists < kDistThreshY & NL_kxDists < kDistThreshX );
-    if numel( NL_shortDistIndxs ) > 0
-      NL_shortDistsKy = NL_kyDists( NL_shortDistIndxs );
-      NL_shortDistsKx = NL_kxDists( NL_shortDistIndxs );
-      NL_CValsY = interp1( kCy, Cy, NL_shortDistsKy, 'linear', 0 );
-      NL_CValsX = interp1( kCx, Cx, NL_shortDistsKx, 'linear', 0 );
-      fftGridded( NL_shortDistIndxs ) = fftGridded( NL_shortDistIndxs ) + ...
-        k(trajIndx) .* (NL_CValsY .* NL_CValsX);
-    end
-
-    % Note: still need to handle the corners
+    NL_distsKy = abs( NL_traj(trajIndx,1) - gridKy );
+    NL_distsKx = abs( NL_traj(trajIndx,2) - gridKx );
+    NL_shortDistIndxs = find( NL_distsKy < kDistThreshY & NL_distsKx < kDistThreshX );
+    NL_shortDistsKy = NL_distsKy( NL_shortDistIndxs );
+    NL_shortDistsKx = NL_distsKx( NL_shortDistIndxs );
+    NL_CValsY = interp1( kCy, Cy, NL_shortDistsKy, 'linear', 0 );
+    NL_CValsX = interp1( kCx, Cx, NL_shortDistsKx, 'linear', 0 );
+    fftGridded(NL_shortDistIndxs) = fftGridded(NL_shortDistIndxs) + ...
+      F(trajIndx) * ( NL_CValsY .* NL_CValsX );
   end
 
-  img = alpha/nKy * alpha/nKx * fftshift( ifft2( ifftshift(fftGridded) ) );
+  % Perform an inverse fft
+  data = fftshift( ifft2( ifftshift(fftGridded) ) );
 
   % Extract out the center region
-  extracted = cropImg( img, N );
+  %extracted = cropImg( img, N );
 
   % Perform deapodization
   cImg = transpose(cImgY) * cImgX;
-  out = extracted ./ cImg;
+  %out = extracted ./ cImg;
+  out = data ./ cImg;
 end
 

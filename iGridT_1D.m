@@ -1,5 +1,5 @@
 
-function out = iGridT_1D( k, traj, N, varargin )
+function out = iGridT_1D( F, traj, N, varargin )
   % out = iGridT_1D( k, traj, N, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % Gridding (without density correction) is the adjoint of MRI encoding
@@ -7,7 +7,8 @@ function out = iGridT_1D( k, traj, N, varargin )
   % inverse gridding to the input data.
   %
   % Inputs:
-  %   k is a 1D array of M elements specifying the k-space data values
+  %   F is a 1D array of M elements specifying the k-space data values
+  %     along the trajectory.
   %   traj is a M element array specifying the k-space trajectory.
   %     The units are normalized to [-0.5,0.5).
   %   N is the number of elements of the output
@@ -23,17 +24,21 @@ function out = iGridT_1D( k, traj, N, varargin )
   defaultAlpha = 1.5;
   defaultW = 8;
   defaultNc = 500;
+  defaultVerbose = false;
   checknum = @(x) isnumeric(x) && isscalar(x) && (x >= 1);
   p = inputParser;
   p.addParamValue( 'alpha', defaultAlpha, checknum );
   p.addParamValue( 'W', defaultW, checknum );
   p.addParamValue( 'nC', defaultNc, checknum );
+  p.addParamValue( 'verbose', defaultVerbose );
   p.parse( varargin{:} );
   alpha = p.Results.alpha;
   W = p.Results.W;
   nC = p.Results.nC;
+  verbose = p.Results.verbose;
 
-  nGrid = ceil( N * alpha );
+  %nGrid = ceil( N * alpha );
+  nGrid = N;
 
   % Make the Kaiser Bessel convolution kernel
   G = nGrid;
@@ -43,40 +48,44 @@ function out = iGridT_1D( k, traj, N, varargin )
 
   nTraj = numel(traj);
   kDistThresh = 0.5*kw;
-  kGridded = zeros( nGrid, 1 );
+  fftGridded = zeros( nGrid, 1 );
   LTraj = traj - 1;
   UTraj = traj + 1;
-  for i=1:nTraj
-    if mod(i,1000)==0
-      fprintf('Working on %i of %i\n', i, nTraj );
+  for trajIndx=1:nTraj
+    if verbose==true && mod(trajIndx,1000)==0
+      fprintf('Working on %i of %i\n', trajIndx, nTraj );
     end
-    kDists = abs( traj(i) - gridKs );
-    shortDists = kDists( kDists < kDistThresh );
+
+    kDists = abs( traj(trajIndx) - gridKs );
+    shortDistIndxs = find( kDists < kDistThresh );
+    shortDists = kDists( shortDistIndxs );
     CVals = interp1( kC, C, shortDists, 'linear', 0 );
-    kGridded( kDists < kDistThresh ) = ...
-     kGridded( kDists < kDistThresh ) + k(i) .* CVals;
+    fftGridded(shortDistIndxs) = fftGridded(shortDistIndxs) + ...
+      F(trajIndx) * CVals;
 
-    % LTraj and UTraj are used to accomplish circular convolution
-    LkDists = abs( LTraj(i) - gridKs );
-    LShortDists = LkDists( LkDists < kDistThresh );
+    LkDists = abs( LTraj(trajIndx) - gridKs );
+    LShortDistIndxs = find( LkDists < kDistThresh );
+    LShortDists = LkDists( LShortDistIndxs );
     LCVals = interp1( kC, C, LShortDists, 'linear', 0 );
-    kGridded( LkDists < kDistThresh ) = ...
-      kGridded( LkDists < kDistThresh ) + k(i) .* LCVals;
+    fftGridded(LShortDistIndxs) = fftGridded(LShortDistIndxs) + ...
+      F(trajIndx) * LCVals;
 
-    UkDists = abs( UTraj(i) - gridKs );
-    UShortDists = UkDists( UkDists < kDistThresh );
+    UkDists = abs( UTraj(trajIndx) - gridKs );
+    UShortDistIndxs = find( UkDists < kDistThresh );
+    UShortDists = UkDists( UShortDistIndxs );
     UCVals = interp1( kC, C, UShortDists, 'linear', 0 );
-    kGridded( UkDists < kDistThresh ) = ...
-      kGridded( UkDists < kDistThresh ) + k(i) .* UCVals;
+    fftGridded(UShortDistIndxs) = fftGridded(UShortDistIndxs) + ...
+      F(trajIndx) * UCVals;
   end
 
-  data = alpha/nGrid * fftshift( ifft( ifftshift(kGridded) ) );
+  data = fftshift( ifft( ifftshift(fftGridded) ) );
     % Divide by nGrid to account for ifft of convolution
 
   % Extract out the center region
-  extracted = cropData( data, N );
+  %extracted = cropData( data, N );
 
   % Perform deapodization
-  out = extracted ./ transpose(c1D);
+  %out = extracted ./ transpose(c1D);
+  out = data ./ transpose(c1D);
 end
 
