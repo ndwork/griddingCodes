@@ -1,5 +1,5 @@
 
-function F = iGrid_1D( data, traj, varargin )
+function F = iGrid_1D_v2( data, traj, varargin )
   % k = iGrid_1D( data, traj, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % MRI encoding with Inverse Gridding
@@ -60,8 +60,6 @@ function F = iGrid_1D( data, traj, varargin )
   nTraj = numel(traj);
   F = zeros( nTraj, 1 );
   kDistThresh = 0.5*kw;
-  LTraj = traj - 1;
-  UTraj = traj + 1;
   for trajIndx = 1:nTraj
     kDists = abs( traj(trajIndx) - gridKs );
     shortDistIndxs = find( kDists < kDistThresh );
@@ -69,16 +67,27 @@ function F = iGrid_1D( data, traj, varargin )
     CVals = interp1( kC, C, shortDists, 'linear', 0 );
     kVals = fftData( shortDistIndxs );
     F(trajIndx) = F(trajIndx) + sum( kVals .* CVals );
+  end
 
-    % LTraj and UTraj are used to accomplish circular convolution
-    LkDists = abs( LTraj(trajIndx) - gridKs );
+  LTraj = traj - 1;
+  LTrajIndxs = find( LTraj > -0.5-kw/2 );
+  LTraj = LTraj( LTrajIndxs );
+	for i=1:numel(LTraj)
+    trajIndx = LTrajIndxs(i);
+    LkDists = abs( LTraj(i) - gridKs );
     LShortDistIndxs = find( LkDists < kDistThresh );
     LShortDists = LkDists( LShortDistIndxs );
     LCVals = interp1( kC, C, LShortDists, 'linear', 0 );
     LKVals = fftData( LShortDistIndxs );
     F(trajIndx) = F(trajIndx) + sum( LKVals .* LCVals );
+  end
 
-    UkDists = abs( UTraj(trajIndx) - gridKs );
+  UTraj = traj + 1;
+  UTrajIndxs = find( UTraj <= 0.5+kw/2 );
+  UTraj = UTraj( UTrajIndxs );
+  for i=1:numel(UTraj)
+    trajIndx = UTrajIndxs(i);
+    UkDists = abs( UTraj(i) - gridKs );
     UShortDistIndxs = find( UkDists < kDistThresh );
     UShortDists = UkDists( UShortDistIndxs );
     UCVals = interp1( kC, C, UShortDists, 'linear', 0 );
