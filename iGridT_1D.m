@@ -62,20 +62,25 @@ function out = iGridT_1D( F, traj, N, varargin )
     CVals = interp1( kC, C, shortDists, 'linear', 0 );
     fftGridded(shortDistIndxs) = fftGridded(shortDistIndxs) + ...
       F(trajIndx) * CVals;
-
-    LkDists = abs( LTraj(trajIndx) - gridKs );
-    LShortDistIndxs = find( LkDists < kDistThresh );
-    LShortDists = LkDists( LShortDistIndxs );
-    LCVals = interp1( kC, C, LShortDists, 'linear', 0 );
-    fftGridded(LShortDistIndxs) = fftGridded(LShortDistIndxs) + ...
-      F(trajIndx) * LCVals;
-
-    UkDists = abs( UTraj(trajIndx) - gridKs );
-    UShortDistIndxs = find( UkDists < kDistThresh );
-    UShortDists = UkDists( UShortDistIndxs );
-    UCVals = interp1( kC, C, UShortDists, 'linear', 0 );
-    fftGridded(UShortDistIndxs) = fftGridded(UShortDistIndxs) + ...
-      F(trajIndx) * UCVals;
+  end
+  
+  for alt=[-1 1]
+    NewTraj = traj + alt;
+    if alt < 0
+      NewTrajIndxs = find( NewTraj > -0.5-kw/2 );
+    else
+      NewTrajIndxs = find( NewTraj < 0.5+kw/2 );
+    end
+    NewTraj = NewTraj( NewTrajIndxs );
+    for i=1:numel(NewTraj)
+      trajIndx = NewTrajIndxs(i);
+      NewkDists = abs( NewTraj(i) - gridKs );
+      NewShortDistIndxs = find( NewkDists < kDistThresh );
+      NewShortDists = NewkDists( NewShortDistIndxs );
+      NewCVals = interp1( kC, C, NewShortDists, 'linear', 0 );
+      fftGridded(NewShortDistIndxs) = fftGridded(NewShortDistIndxs) + ...
+        F(trajIndx) * NewCVals;
+    end
   end
 
   data = fftshift( ifft( ifftshift(fftGridded) ) );

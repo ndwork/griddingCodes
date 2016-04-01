@@ -69,7 +69,7 @@ function F = iGrid_1D_v2( data, traj, varargin )
     F(trajIndx) = F(trajIndx) + sum( kVals .* CVals );
   end
 
-  for alt=-1:2:1
+  for alt=[-1 1]
     NewTraj = traj + alt;
     if alt < 0
       NewTrajIndxs = find( NewTraj > -0.5-kw/2 );
