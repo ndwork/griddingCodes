@@ -1,6 +1,6 @@
 
-function F = iGrid_1D_v2( data, traj, varargin )
-  % k = iGrid_1D( data, traj, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
+function F = iGrid_1D( data, traj, varargin )
+  % F = iGrid_1D( data, traj, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % MRI encoding with Inverse Gridding
   %
