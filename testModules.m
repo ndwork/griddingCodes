@@ -48,10 +48,7 @@ function testModules
   trueKxVals = p .* sinc( p .* kTraj(:,1) );
   trueKyVals = p .* sinc( p .* kTraj(:,2) );
   trueKVals = trueKxVals .* trueKyVals;
-  tic;
   kVals = iGrid_2D( img, kTraj );
-  iGridTime = toc;
-  disp(['iGrid_2D time: ', num2str(iGridTime)]);
   error = norm( trueKVals - kVals, 2 ) / norm( trueKVals, 2 );
   disp(['iGrid_2D error: ', num2str(error)]);
 
