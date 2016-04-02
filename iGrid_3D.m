@@ -71,7 +71,7 @@ function F = iGrid_3D( data, traj, varargin )
   for trajIndx = 1:nTraj
     distsKy = abs( traj(trajIndx,1) - gridKy );
     distsKx = abs( traj(trajIndx,2) - gridKx );
-    distsKz = abs( traj(trajIndx,1) - gridKz );
+    distsKz = abs( traj(trajIndx,3) - gridKz );
     shortDistIndxs = find( distsKy < kDistThreshY & ...
                            distsKx < kDistThreshX & ...
                            distsKz < kDistThreshZ );

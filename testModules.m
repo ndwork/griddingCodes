@@ -65,5 +65,17 @@ function testModules
   error = abs( innerProd1 - innerProd2 );
   disp([ 'iGrid/iGridT 2D Adjointness error:  ', num2str(error) ]);
 
+  %% Make sure iGrid_3D and iGridT_3D are adjoints
+  sizeX = [ 50, 50, 50 ];
+  nY = 20;
+  kTraj = rand( nY, 3 ) - 0.5;
+  x = rand( sizeX );
+  y = rand( nY, 1 );
+  Ax = iGrid_3D( x, kTraj );
+  innerProd1 = dotP( Ax, y );
+  ATy = iGridT_3D( y, kTraj, sizeX );
+  innerProd2 = dotP( x, ATy );
+  error = abs( innerProd1 - innerProd2 );
+  disp([ 'iGrid/iGridT 2D Adjointness error:  ', num2str(error) ]);
 end
 

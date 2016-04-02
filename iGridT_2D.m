@@ -94,7 +94,7 @@ function out = iGridT_2D( F, traj, N, varargin )
         NewDistsKy = abs( NewTraj(i,1) - gridKy );
         NewDistsKx = abs( NewTraj(i,2) - gridKx );
         NewShortDistIndxs = find( NewDistsKy < kDistThreshY & ...
-                                  NewDistsKx < kDistThreshY );
+                                  NewDistsKx < kDistThreshX );
         NewShortDistsKy = NewDistsKy( NewShortDistIndxs );
         NewShortDistsKx = NewDistsKx( NewShortDistIndxs );
         NewCValsY = interp1( kCy, Cy, NewShortDistsKy, 'linear', 0 );
