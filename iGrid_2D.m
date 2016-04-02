@@ -47,7 +47,6 @@ function F = iGrid_2D( data, traj, varargin )
 
   % Pre-emphasize the image
   cImg = transpose(cImgY) * cImgX;
-  %preEmphasized = padded ./ cImg;
   preEmphasized = data ./ cImg;
 
   % Perform an fft

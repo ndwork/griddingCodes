@@ -1,67 +1,126 @@
 
-function k = applyE_3D( img, traj, varargin )
+function F = iGrid_3D( data, traj, varargin )
+  % F = iGrid_3D( data, traj, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
+  %
   % MRI encoding with Inverse Gridding
-  % img is a 3D array specifying the volume to be encoded
-  % traj is a Mx3 array specifying the k-space trajectory.
-  %   The first/second/third column is kx/ky/kz
-  %   The units are normalized to [-0.5,0.5).
-  % k is a 1D array of M elements specifying the k-space data values
+  %
+  % Inputs
+  %   data is a 2D array specifying the volume to be encoded
+  %   traj is a Mx3 array specifying the k-space trajectory.
+  %     The first/second/third column is ky/kx/kz
+  %     The units are normalized to [-0.5,0.5).
+  %
+  % Optional Inputs:
+  %   alpha is the oversampling factor >= 1
+  %   W is the window width in pixels
+  %   nC is the number of points to sample the convolution kernel
+  %
+  % Output:
+  %   F the estimates of the Fourier coefficients along the trajectory
+  %
+  % Written by Nicholas Dwork (c) 2015
+  % Based on Beatty et. al., IEEE TMI, 2005
 
-  defaultAlpha = 1.25;
-  defaultW = 6;
+  defaultAlpha = 1.5;
+  defaultW = 8;
   defaultNc = 500;
   checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
   p = inputParser;
   p.addParamValue( 'alpha', defaultAlpha, checknum );
-  p.addParamValue( 'w', defaultW, checknum );
+  p.addParamValue( 'W', defaultW, checknum );
   p.addParamValue( 'nC', defaultNc, checknum );
   p.parse( varargin{:} );
   alpha = p.Results.alpha;
-  w = p.Results.w;
+  W = p.Results.W;
   nC = p.Results.nC;
 
-  [Ny,Nx,Nz] = size( img );
-  nKwy = ceil( Ny * alpha );
-  nKwx = ceil( Nx * alpha );
-  nKwz = ceil( Nz * alpha );
+  [Ny,Nx,Nz] = size( data );
 
   % Make the convolution kernel
-  G = max([ nKwy, nKwx, nKwz ]);
-  beta = pi * sqrt( W*W/(alpha*alpha) * (alpha-0.5)^2 - 0.8 );
-  ck = linspace(0, W/(2*G), nC);
-  c = G/W * besseli( 0, beta * sqrt( 1 - ( 2*G*ck/W ).^2 ) );
+  nGridY = Ny;
+  Gy = nGridY;
+  [kCy,Cy,cImgY,kwy] = makeKbKernel( Gy, nGridY, alpha, W, nC );
+  nGridX = Nx;
+  Gx = nGridX;
+  [kCx,Cx,cImgX,kwx] = makeKbKernel( Gx, nGridX, alpha, W, nC );
+  kws = [ kwy kwx ];
+  nGridZ = Nz;
+  Gz = nGridZ;
+  [kCz,Cz,cImgZ,kwz] = makeKbKernel( Gz, nGridZ, alpha, W, nC );
+  kws = [ kwy, kwx, kwz ];
 
-  kwy = linspace( -0.5, 0.5, nKwy );
-  kwx = linspace( -0.5, 0.5, nKwx );
-  kwz = linspace( -0.5, 0.5, nKwz );
-  [kwy,kwx,kwz] = meshgrid( kwy, kwx, kwz );
+  % Pre-emphasize the image
+  cImgYX = transpose(cImgY) * cImgX;
+  cImgZ_reshaped = reshape( cImgZ, [1 1 numel(cImgZ)] );
+  cImg = bsxfun( @times, cImgZ_reshaped, cImgYX );
+  preEmphasized = data ./ cImg;
 
-  kr = sqrt( kwy.*kwy + kwx.*kwx + kwz.*kwz );
-  c = interp1( ck, c, kr, 'linear', 0 );
-  ifftC = fftshift( ifftn( ifftshift(c) ) );
+  % Perform an fft
+  fftData = 1/(nGridY*nGridX*nGridZ) * fftshift( fftn( ifftshift(preEmphasized) ) );
 
-  padded = zeros( nKwy, nKwx, nKwz );
-  minY = ceil( nKwy/2 - Ny/2 + 1 );
-  minX = ceil( nKwx/2 - Nx/2 + 1 );
-  minZ = ceil( nKwz/2 - Nz/2 + 1 );
-  padded( minY:minY+Ny-1, minX:minX+Nx-1, minZ:minZ+Nz-1 ) = img;
-  preEmphasized = padded ./ ifftC;
-  fftPadded = fftshift( fftn( ifftshift(preEmphasized) ) );
+  % Perform a circular convolution
+  gridKs = size2fftCoordinates( [nGridY nGridX nGridZ] );
+  gridKy=gridKs{1};  gridKx=gridKs{2};  gridKz=gridKs{3};
+  [gridKx,gridKy,gridKz] = meshgrid( gridKx, gridKy, gridKz );
 
-  nK = size( traj, 1 );
-  k = zeros( nK, 1 );
-  for kIndx = 1:nK
-    distsY = ( traj(kIndx,1) - kwy );  distsYSq = distsY .* distsY;
-    distsX = ( traj(kIndx,2) - kwx );  distsXSq = distsX .* distsX;
-    distsZ = ( traj(kIndx,3) - kwz );  distsZSq = distsZ .* distsZ;
+  nTraj = size( traj, 1 );
+  kDistThreshY = 0.5*kwy;
+  kDistThreshX = 0.5*kwx;
+  kDistThreshZ = 0.5*kwz;
+  F = zeros( nTraj, 1 );
+  for trajIndx = 1:nTraj
+    distsKy = abs( traj(trajIndx,1) - gridKy );
+    distsKx = abs( traj(trajIndx,2) - gridKx );
+    distsKz = abs( traj(trajIndx,1) - gridKz );
+    shortDistIndxs = find( distsKy < kDistThreshY & ...
+                           distsKx < kDistThreshX & ...
+                           distsKz < kDistThreshZ );
+    shortDistsKy = distsKy( shortDistIndxs );
+    shortDistsKx = distsKx( shortDistIndxs );
+    shortDistsKz = distsKz( shortDistIndxs );
+    CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
+    CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
+    CValsZ = interp1( kCz, Cz, shortDistsKz, 'linear', 0 );
+    kVals = fftData( shortDistIndxs );
+    F( trajIndx ) = F( trajIndx ) + sum( kVals .* ...
+      CValsY .* CValsX .* CValsZ );
+  end
 
-    dists = sqrt( distsYSq + distsXSq + distsZSq );
-    shortDists = dists( dists < kw/2 );
-    cVals = interp1( ck, c, shortDists, 'linear', 0 );
-    kVals = fftPadded( dists < kw/2 );
-    k(kIndx) = sum( kVals .* cVals );
+  % Circular convolution
+  onesCol = ones(nTraj,1);
+  for dim=1:3
+    alt = zeros( size(traj) );
+    alt(:,dim) = onesCol;
+
+    for altDir=[-1 1]
+      NewTraj = traj + altDir*alt;
+      if altDir < 0
+        NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim)/2 );
+      else
+        NewTrajIndxs = find( NewTraj(:,dim) < 0.5+kws(dim)/2 );
+      end
+
+      NewTraj = NewTraj( NewTrajIndxs, : );
+      for i=1:numel(NewTrajIndxs)
+        trajIndx = NewTrajIndxs(i);
+        NewDistsKy = abs( NewTraj(i,1) - gridKy );
+        NewDistsKx = abs( NewTraj(i,2) - gridKx );
+        NewDistsKz = abs( NewTraj(i,3) - gridKz );
+        NewShortDistIndxs = find( NewDistsKy < kDistThreshY & ...
+                                  NewDistsKx < kDistThreshX & ...
+                                  NewDistsKz < kDistThreshZ );
+        NewShortDistsKy = NewDistsKy( NewShortDistIndxs );
+        NewShortDistsKx = NewDistsKx( NewShortDistIndxs );
+        NewShortDistsKz = NewDistsKz( NewShortDistIndxs );
+        NewCValsY = interp1( kCy, Cy, NewShortDistsKy, 'linear', 0 );
+        NewCValsX = interp1( kCx, Cx, NewShortDistsKx, 'linear', 0 );
+        NewCValsZ = interp1( kCz, Cz, NewShortDistsKz, 'linear', 0 );
+        NewKVals = fftData( NewShortDistIndxs );
+        F(trajIndx) = F(trajIndx) + sum( NewKVals .* ...
+          NewCValsY .* NewCValsX .* NewCValsZ );
+      end
+    end
   end
 
 end
-
 

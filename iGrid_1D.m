@@ -34,14 +34,6 @@ function F = iGrid_1D( data, traj, varargin )
   nC = p.Results.nC;
 
   nData = numel(data);
-  %nGrid = ceil( nData * alpha );
-  %if mod(nData,2)==0
-  %  minY = floor( nGrid/2 - nData/2 + 1 );
-  %else
-  %  minY = ceil( nGrid/2 - nData/2 + 1 );
-  %end
-  %padded = zeros( nGrid, 1 );
-  %padded( minY : minY+nData-1 ) = data;
 
   % Make the Kaiser Bessel convolution kernel
   nGrid = nData;
@@ -49,7 +41,6 @@ function F = iGrid_1D( data, traj, varargin )
   [kC,C,c1D,kw] = makeKbKernel( G, nGrid, alpha, W, nC );
 
   % Pre-emphasize the image
-  %preEmphasized = padded ./ transpose(c1D);
   preEmphasized = data ./ transpose(c1D);
 
   fftData = 1/nGrid * fftshift( fft( ifftshift(preEmphasized) ) );
