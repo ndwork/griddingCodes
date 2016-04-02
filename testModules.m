@@ -8,7 +8,6 @@ function testModules
   rectWidth = 31;
   dataCoords = (0:(nPts-1)) - ceil((nPts-1)/2);
   rect = double( abs(dataCoords) <= rectWidth/2 )';
-
   %kTraj = rand( nPts, 1 ) - 0.5;
   dk = 1/nPts;
   kTraj = -0.5 : dk : 0.5-dk;
@@ -48,8 +47,11 @@ function testModules
   trueKxVals = p .* sinc( p .* kTraj(:,1) );
   trueKyVals = p .* sinc( p .* kTraj(:,2) );
   trueKVals = trueKxVals .* trueKyVals;
+  tic;
   kVals = iGrid_2D( img, kTraj );
+  iGrid_2D_time = toc;
   error = norm( trueKVals - kVals, 2 ) / norm( trueKVals, 2 );
+  disp(['iGrid_2D time take: ', num2str(iGrid_2D_time)]);
   disp(['iGrid_2D error: ', num2str(error)]);
 
   %% Make sure iGrid_2D and iGridT_2D are adjoints
@@ -65,6 +67,29 @@ function testModules
   error = abs( innerProd1 - innerProd2 );
   disp([ 'iGrid/iGridT 2D Adjointness error:  ', num2str(error) ]);
 
+  %% Test iGrid_3D
+  % iGrid_3D:  test for values when transforming known object
+  % The object is a simple square, which transforms to a 3D sinc
+  % The k-space trajector will be randomly selected point
+  nKPts = 500;
+  nPts = 512;
+  squareWidth = 2/100;
+  kTraj = rand( nKPts, 3 ) - 0.5;
+  imgCoords = (0:(nPts-1)) - ceil(nPts/2);
+  [x,y,z] = meshgrid( imgCoords, imgCoords, imgCoords );
+  p = 1/(squareWidth*0.5);
+  img = abs(x) < p*0.5 & abs(y) < p*0.5 & abs(z) < p*0.5;
+  trueKxVals = p .* sinc( p .* kTraj(:,1) );
+  trueKyVals = p .* sinc( p .* kTraj(:,2) );
+  trueKzVals = p .* sinc( p .* kTraj(:,3) );
+  trueKVals = trueKxVals .* trueKyVals .* trueKzVals;
+  tic;
+  kVals = iGrid_3D( img, kTraj );
+  iGrid_3D_time = toc;
+  error = norm( trueKVals - kVals, 2 ) / norm( trueKVals, 2 );
+  disp(['iGrid_3D time taken: ', num2str(iGrid_3D_time)]);
+  disp(['iGrid_3D error: ', num2str(error)]);
+
   %% Make sure iGrid_3D and iGridT_3D are adjoints
   sizeX = [ 50, 50, 50 ];
   nY = 20;
@@ -76,6 +101,6 @@ function testModules
   ATy = iGridT_3D( y, kTraj, sizeX );
   innerProd2 = dotP( x, ATy );
   error = abs( innerProd1 - innerProd2 );
-  disp([ 'iGrid/iGridT 2D Adjointness error:  ', num2str(error) ]);
+  disp([ 'iGrid/iGridT 3D Adjointness error:  ', num2str(error) ]);
 end
 
