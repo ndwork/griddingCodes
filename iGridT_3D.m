@@ -58,7 +58,6 @@ function out = iGridT_3D( F, traj, N, varargin )
 
   gridKs = size2fftCoordinates([ nGridY nGridX nGridZ ]);
   gridKy=gridKs{1};  gridKx=gridKs{2};  gridKz=gridKs{3};
-  [gridKx,gridKy,gridKz] = meshgrid(gridKx,gridKy,gridKz);
 
   % Perform Adjoint of Circular Convolution
   nTraj = size(traj,1);
@@ -66,21 +65,24 @@ function out = iGridT_3D( F, traj, N, varargin )
   kDistThreshX = 0.5*kwx;
   kDistThreshZ = 0.5*kwz;
   fftGridded = zeros( nGridY, nGridX, nGridZ );
-  for trajIndx=1:nTraj
+  for trajIndx = 1:nTraj
     distsKy = abs( traj(trajIndx,1) - gridKy );
     distsKx = abs( traj(trajIndx,2) - gridKx );
     distsKz = abs( traj(trajIndx,3) - gridKz );
-    shortDistIndxs = find( distsKy < kDistThreshY & ...
-                           distsKx < kDistThreshX & ...
-                           distsKz < kDistThreshZ );
-    shortDistsKy = distsKy( shortDistIndxs );
-    shortDistsKx = distsKx( shortDistIndxs );
-    shortDistsKz = distsKz( shortDistIndxs );
+    shortDistIndxsY = find( distsKy < kDistThreshY );
+    shortDistIndxsX = find( distsKx < kDistThreshX );
+    shortDistIndxsZ = find( distsKz < kDistThreshZ );
+    shortDistsKy = distsKy( shortDistIndxsY );
+    shortDistsKx = distsKx( shortDistIndxsX );
+    shortDistsKz = distsKz( shortDistIndxsZ );
     CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
     CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
     CValsZ = interp1( kCz, Cz, shortDistsKz, 'linear', 0 );
-    fftGridded(shortDistIndxs) = fftGridded(shortDistIndxs) + ...
-      F(trajIndx) * ( CValsY .* CValsX .* CValsZ );
+    CVals = bsxfun( @times, CValsY*transpose(CValsX), ...
+      reshape( CValsZ, [1 1 numel(CValsZ)] ) );
+    fftGridded(shortDistIndxsY,shortDistIndxsX,shortDistIndxsZ ) = ...
+      fftGridded(shortDistIndxsY,shortDistIndxsX,shortDistIndxsZ ) + ...
+      F(trajIndx) * CVals;
   end
 
   % Circular convolution
@@ -103,17 +105,20 @@ function out = iGridT_3D( F, traj, N, varargin )
         NewDistsKy = abs( NewTraj(i,1) - gridKy );
         NewDistsKx = abs( NewTraj(i,2) - gridKx );
         NewDistsKz = abs( NewTraj(i,3) - gridKz );
-        NewShortDistIndxs = find( NewDistsKy < kDistThreshY & ...
-                                  NewDistsKx < kDistThreshX & ...
-                                  NewDistsKz < kDistThreshZ );
-        NewShortDistsKy = NewDistsKy( NewShortDistIndxs );
-        NewShortDistsKx = NewDistsKx( NewShortDistIndxs );
-        NewShortDistsKz = NewDistsKz( NewShortDistIndxs );
+        NewShortDistIndxsY = find( NewDistsKy < kDistThreshY );
+        NewShortDistIndxsX = find( NewDistsKx < kDistThreshX );
+        NewShortDistIndxsZ = find( NewDistsKz < kDistThreshZ );
+        NewShortDistsKy = NewDistsKy( NewShortDistIndxsY );
+        NewShortDistsKx = NewDistsKx( NewShortDistIndxsX );
+        NewShortDistsKz = NewDistsKz( NewShortDistIndxsZ );
         NewCValsY = interp1( kCy, Cy, NewShortDistsKy, 'linear', 0 );
         NewCValsX = interp1( kCx, Cx, NewShortDistsKx, 'linear', 0 );
         NewCValsZ = interp1( kCz, Cz, NewShortDistsKz, 'linear', 0 );
-        fftGridded(NewShortDistIndxs) = fftGridded(NewShortDistIndxs) + ...
-          F(trajIndx) * ( NewCValsY .* NewCValsX .* NewCValsZ );
+        NewCVals = bsxfun( @times, NewCValsY*transpose(NewCValsX), ...
+          reshape( NewCValsZ, [1 1 numel(NewCValsZ)] ) );
+        fftGridded( NewShortDistIndxsY, NewShortDistIndxsX, NewShortDistIndxsZ ) = ...
+          fftGridded( NewShortDistIndxsY, NewShortDistIndxsX, NewShortDistIndxsZ ) + ...
+          F(trajIndx) * NewCVals;
       end
     end
   end

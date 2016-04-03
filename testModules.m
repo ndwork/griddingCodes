@@ -3,6 +3,36 @@
 function testModules
   close all; clear; rng(1);
 
+  %% Test grid_1D
+  imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
+  img = double( imread( imgFile ) );
+  img = img(1:5:end,1:5:end);
+  data = img(50,:);
+  data = transpose( data ./ max(data) );
+  nData = numel(data);
+  fftData = fftshift( fft( ifftshift( data ) ) );
+  traj = size2fftCoordinates( numel(fftData) );
+  out = grid_1D( fftData, traj, nData, 'alpha', 1.5, 'W', 6 );
+  error = norm( out - data, 2 ) / norm( data, 2 );
+  disp([ 'grid_1D error: ', num2str(error) ]);
+
+%   %% Test grid_2D
+%   %  Test with Fourier Transform of known 2D values
+%   imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
+%   img = double( imread( imgFile ) );
+%   img = img(1:5:end,1:5:end);
+%   fftImg = fftshift( fft2( ifftshift( img ) ) );
+%   ks = size2fftCoordinates( size( fftImg ) );
+%   ky=ks{1};  kx=ks{2};
+%   [kx,ky] = meshgrid( kx, ky );
+%   traj = zeros( numel(img), 2 );
+%   traj(:,1) = ky(:);  traj(:,2) = kx(:);
+%   out = grid_2D( fftImg(:), traj, size(img), 'alpha', 1.5, 'W', 10 );
+%   figure; imshow(imresize(img,3,'nearest'),[0 255]); title('origImg');
+%   figure; imshow(imresize(out,3,'nearest'),[0 255]); title('out');
+%   error = norm( out(:) - img(:), 2 ) / norm( img(:), 2 );
+%   disp([ 'iGridT_2D error: ', num2str(error) ]);
+
   %% Test iGrid_1D
   nPts = 100;
   rectWidth = 31;
