@@ -60,7 +60,6 @@ function F = iGrid_3D( data, traj, varargin )
   % Perform a circular convolution
   gridKs = size2fftCoordinates( [nGridY nGridX nGridZ] );
   gridKy=gridKs{1};  gridKx=gridKs{2};  gridKz=gridKs{3};
-  %[gridKx,gridKy,gridKz] = meshgrid( gridKx, gridKy, gridKz );
 
   nTraj = size( traj, 1 );
   kDistThreshY = 0.5*kwy;
@@ -74,7 +73,6 @@ function F = iGrid_3D( data, traj, varargin )
     shortDistIndxsY = find( distsKy < kDistThreshY );
     shortDistIndxsX = find( distsKx < kDistThreshX );
     shortDistIndxsZ = find( distsKz < kDistThreshZ );
-
     shortDistsKy = distsKy( shortDistIndxsY );
     shortDistsKx = distsKx( shortDistIndxsX );
     shortDistsKz = distsKz( shortDistIndxsZ );
@@ -83,8 +81,8 @@ function F = iGrid_3D( data, traj, varargin )
     CValsZ = interp1( kCz, Cz, shortDistsKz, 'linear', 0 );
     CVals = bsxfun( @times, CValsY*transpose(CValsX), ...
       reshape( CValsZ, [1 1 numel(CValsZ)] ) );
-    kVals = fftData( shortDistIndxsY, shortDistIndxsX, shortDistIndxsZ );
-    F( trajIndx ) = F( trajIndx ) + sum( kVals(:) .* CVals(:) );
+    fftVals = fftData( shortDistIndxsY, shortDistIndxsX, shortDistIndxsZ );
+    F( trajIndx ) = F( trajIndx ) + sum( fftVals(:) .* CVals(:) );
   end
 
   % Circular convolution
@@ -110,7 +108,6 @@ function F = iGrid_3D( data, traj, varargin )
         NewShortDistIndxsY = find( NewDistsKy < kDistThreshY );
         NewShortDistIndxsX = find( NewDistsKx < kDistThreshX );
         NewShortDistIndxsZ = find( NewDistsKz < kDistThreshZ );
-
         NewShortDistsKy = distsKy( NewShortDistIndxsY );
         NewShortDistsKx = distsKx( NewShortDistIndxsX );
         NewShortDistsKz = distsKz( NewShortDistIndxsZ );
@@ -119,9 +116,9 @@ function F = iGrid_3D( data, traj, varargin )
         NewCValsZ = interp1( kCz, Cz, NewShortDistsKz, 'linear', 0 );
         NewCVals = bsxfun( @times, NewCValsY*transpose(NewCValsX), ...
           reshape( NewCValsZ, [1 1 numel(NewCValsZ)] ) );
-        NewkVals = fftData( NewShortDistIndxsY, NewShortDistIndxsX, ...
+        NewFftVals = fftData( NewShortDistIndxsY, NewShortDistIndxsX, ...
           NewShortDistIndxsZ );
-        F( trajIndx ) = F( trajIndx ) + sum( NewkVals(:) .* NewCVals(:) );
+        F( trajIndx ) = F( trajIndx ) + sum( NewFftVals(:) .* NewCVals(:) );
       end
     end
   end
