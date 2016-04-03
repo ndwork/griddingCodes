@@ -43,7 +43,6 @@ function F = iGrid_3D( data, traj, varargin )
   nGridX = Nx;
   Gx = nGridX;
   [kCx,Cx,cImgX,kwx] = makeKbKernel( Gx, nGridX, alpha, W, nC );
-  kws = [ kwy kwx ];
   nGridZ = Nz;
   Gz = nGridZ;
   [kCz,Cz,cImgZ,kwz] = makeKbKernel( Gz, nGridZ, alpha, W, nC );
@@ -61,7 +60,7 @@ function F = iGrid_3D( data, traj, varargin )
   % Perform a circular convolution
   gridKs = size2fftCoordinates( [nGridY nGridX nGridZ] );
   gridKy=gridKs{1};  gridKx=gridKs{2};  gridKz=gridKs{3};
-  [gridKx,gridKy,gridKz] = meshgrid( gridKx, gridKy, gridKz );
+  %[gridKx,gridKy,gridKz] = meshgrid( gridKx, gridKy, gridKz );
 
   nTraj = size( traj, 1 );
   kDistThreshY = 0.5*kwy;
@@ -72,18 +71,20 @@ function F = iGrid_3D( data, traj, varargin )
     distsKy = abs( traj(trajIndx,1) - gridKy );
     distsKx = abs( traj(trajIndx,2) - gridKx );
     distsKz = abs( traj(trajIndx,3) - gridKz );
-    shortDistIndxs = find( distsKy < kDistThreshY & ...
-                           distsKx < kDistThreshX & ...
-                           distsKz < kDistThreshZ );
-    shortDistsKy = distsKy( shortDistIndxs );
-    shortDistsKx = distsKx( shortDistIndxs );
-    shortDistsKz = distsKz( shortDistIndxs );
+    shortDistIndxsY = find( distsKy < kDistThreshY );
+    shortDistIndxsX = find( distsKx < kDistThreshX );
+    shortDistIndxsZ = find( distsKz < kDistThreshZ );
+
+    shortDistsKy = distsKy( shortDistIndxsY );
+    shortDistsKx = distsKx( shortDistIndxsX );
+    shortDistsKz = distsKz( shortDistIndxsZ );
     CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
     CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
     CValsZ = interp1( kCz, Cz, shortDistsKz, 'linear', 0 );
-    kVals = fftData( shortDistIndxs );
-    F( trajIndx ) = F( trajIndx ) + sum( kVals .* ...
-      CValsY .* CValsX .* CValsZ );
+    CVals = bsxfun( @times, CValsY*transpose(CValsX), ...
+      reshape( CValsZ, [1 1 numel(CValsZ)] ) );
+    kVals = fftData( shortDistIndxsY, shortDistIndxsX, shortDistIndxsZ );
+    F( trajIndx ) = F( trajIndx ) + sum( kVals(:) .* CVals(:) );
   end
 
   % Circular convolution
@@ -106,18 +107,21 @@ function F = iGrid_3D( data, traj, varargin )
         NewDistsKy = abs( NewTraj(i,1) - gridKy );
         NewDistsKx = abs( NewTraj(i,2) - gridKx );
         NewDistsKz = abs( NewTraj(i,3) - gridKz );
-        NewShortDistIndxs = find( NewDistsKy < kDistThreshY & ...
-                                  NewDistsKx < kDistThreshX & ...
-                                  NewDistsKz < kDistThreshZ );
-        NewShortDistsKy = NewDistsKy( NewShortDistIndxs );
-        NewShortDistsKx = NewDistsKx( NewShortDistIndxs );
-        NewShortDistsKz = NewDistsKz( NewShortDistIndxs );
+        NewShortDistIndxsY = find( NewDistsKy < kDistThreshY );
+        NewShortDistIndxsX = find( NewDistsKx < kDistThreshX );
+        NewShortDistIndxsZ = find( NewDistsKz < kDistThreshZ );
+
+        NewShortDistsKy = distsKy( NewShortDistIndxsY );
+        NewShortDistsKx = distsKx( NewShortDistIndxsX );
+        NewShortDistsKz = distsKz( NewShortDistIndxsZ );
         NewCValsY = interp1( kCy, Cy, NewShortDistsKy, 'linear', 0 );
         NewCValsX = interp1( kCx, Cx, NewShortDistsKx, 'linear', 0 );
         NewCValsZ = interp1( kCz, Cz, NewShortDistsKz, 'linear', 0 );
-        NewKVals = fftData( NewShortDistIndxs );
-        F(trajIndx) = F(trajIndx) + sum( NewKVals .* ...
-          NewCValsY .* NewCValsX .* NewCValsZ );
+        NewCVals = bsxfun( @times, NewCValsY*transpose(NewCValsX), ...
+          reshape( NewCValsZ, [1 1 numel(NewCValsZ)] ) );
+        NewkVals = fftData( NewShortDistIndxsY, NewShortDistIndxsX, ...
+          NewShortDistIndxsZ );
+        F( trajIndx ) = F( trajIndx ) + sum( NewkVals(:) .* NewCVals(:) );
       end
     end
   end
