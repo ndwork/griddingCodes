@@ -86,11 +86,7 @@ function out = iGridT_1D( F, traj, N, varargin )
   data = fftshift( ifft( ifftshift(fftGridded) ) );
     % Divide by nGrid to account for ifft of convolution
 
-  % Extract out the center region
-  %extracted = cropData( data, N );
-
   % Perform deapodization
-  %out = extracted ./ transpose(c1D);
   out = data ./ transpose(c1D);
 end
 
