@@ -63,7 +63,7 @@ function out = iGridT_1D( F, traj, N, varargin )
     fftGridded(shortDistIndxs) = fftGridded(shortDistIndxs) + ...
       F(trajIndx) * CVals;
   end
-  
+
   for alt=[-1 1]
     NewTraj = traj + alt;
     if alt < 0
@@ -84,7 +84,6 @@ function out = iGridT_1D( F, traj, N, varargin )
   end
 
   data = fftshift( ifft( ifftshift(fftGridded) ) );
-    % Divide by nGrid to account for ifft of convolution
 
   % Perform deapodization
   out = data ./ transpose(c1D);

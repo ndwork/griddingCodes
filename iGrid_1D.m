@@ -41,10 +41,11 @@ function F = iGrid_1D( data, traj, varargin )
   [kC,C,c1D,kw] = makeKbKernel( G, nGrid, alpha, W, nC );
 
   % Pre-emphasize the image
-  preEmphasized = data ./ transpose(c1D);
+  deap = 1 ./ ( nGrid * transpose(c1D) );
+  preEmphasized = data .* deap;
 
-  fftData = 1/nGrid * fftshift( fft( ifftshift(preEmphasized) ) );
-    % divide my N to account for convolution
+  % Perform DFT
+  fftData = fftshift( fft( ifftshift(preEmphasized) ) );
 
   % Perform a circular convolution
   gridKs = size2fftCoordinates( nGrid );
@@ -57,7 +58,7 @@ function F = iGrid_1D( data, traj, varargin )
     shortDists = kDists( shortDistIndxs );
     CVals = interp1( kC, C, shortDists, 'linear', 0 );
     kVals = fftData( shortDistIndxs );
-    F(trajIndx) = F(trajIndx) + sum( kVals .* CVals );
+    F(trajIndx) = sum( kVals .* CVals );
   end
 
   for alt=[-1 1]
