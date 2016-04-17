@@ -33,22 +33,20 @@ function F = iGrid_1D( data, traj, varargin )
   W = p.Results.W;
   nC = p.Results.nC;
 
-  nData = numel(data);
+  N = numel(data);
 
   % Make the Kaiser Bessel convolution kernel
-  nGrid = nData;
-  G = nGrid;
-  [kC,C,c1D,kw] = makeKbKernel( G, nGrid, alpha, W, nC );
+  G = N;
+  [kC,C,c1D,kw] = makeKbKernel( G, N, alpha, W, nC );
 
   % Pre-emphasize the image
-  deap = 1 ./ ( nGrid * transpose(c1D) );
-  preEmphasized = data .* deap;
+  preEmphasized = data ./ ( N * transpose(c1D) );
 
   % Perform DFT
   fftData = fftshift( fft( ifftshift(preEmphasized) ) );
 
   % Perform a circular convolution
-  gridKs = size2fftCoordinates( nGrid );
+  gridKs = size2fftCoordinates( N );
   nTraj = numel(traj);
   F = zeros( nTraj, 1 );
   kDistThresh = 0.5*kw;

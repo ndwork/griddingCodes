@@ -1,6 +1,6 @@
 
 function out = iGridT_1D( F, traj, N, varargin )
-  % out = iGridT_1D( k, traj, N, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
+  % out = iGridT_1D( F, traj, N, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % Gridding (without density correction) is the adjoint of MRI encoding
   % with inverse gridding.  This function applies the transpose of
@@ -37,20 +37,16 @@ function out = iGridT_1D( F, traj, N, varargin )
   nC = p.Results.nC;
   verbose = p.Results.verbose;
 
-  %nGrid = ceil( N * alpha );
-  nGrid = N;
 
   % Make the Kaiser Bessel convolution kernel
-  G = nGrid;
+  G = N;
   [kC,C,c1D,kw] = makeKbKernel( G, N, alpha, W, nC );
 
-  gridKs = size2fftCoordinates( nGrid );
+  gridKs = size2fftCoordinates( N );
 
   nTraj = numel(traj);
   kDistThresh = 0.5*kw;
-  fftGridded = zeros( nGrid, 1 );
-  LTraj = traj - 1;
-  UTraj = traj + 1;
+  fftGridded = zeros( N, 1 );
   for trajIndx=1:nTraj
     if verbose==true && mod(trajIndx,1000)==0
       fprintf('Working on %i of %i\n', trajIndx, nTraj );

@@ -3,6 +3,57 @@
 function testModules
   close all; clear; rng(1);
 
+  %% Test DFT
+  nPts = 100;
+  rectWidth = 31;
+  dataCoords = (0:(nPts-1)) - ceil((nPts-1)/2);
+  rect = double( abs(dataCoords) <= rectWidth/2 )';
+  %kTraj = rand( nPts, 1 ) - 0.5;
+  dk = 1/nPts;
+  kTraj = -0.5 : dk : 0.5-dk;
+  trueFourierValues = rectWidth .* sinc( rectWidth .* kTraj );
+  DFTValues = fftshift( fft( ifftshift(rect) ) );
+  error = norm( trueFourierValues(:) - DFTValues(:), 2 ) / ...
+          norm( trueFourierValues, 2 );
+  disp([ 'iDFT error: ', num2str(error) ]);
+
+  %% Test iGrid_1D
+  nPts = 100;
+  rectWidth = 31;
+  dataCoords = (0:(nPts-1)) - ceil((nPts-1)/2);
+  rect = double( abs(dataCoords) <= rectWidth/2 )';
+  %kTraj = rand( nPts, 1 ) - 0.5;
+  dk = 1/nPts;
+  kTraj = -0.5 : dk : 0.5-dk;
+  trueFourierValues = rectWidth .* sinc( rectWidth .* kTraj );
+  iGridFourierValues = iGrid_1D( rect, kTraj, 'alpha', 1.5, 'W', 8 );
+  error = norm( trueFourierValues(:) - iGridFourierValues(:), 2 ) / ...
+          norm( trueFourierValues, 2 );
+  disp([ 'iGrid_1D error: ', num2str(error) ]);
+
+  % Test grid_1D - roundtrip with iGrid_1D
+  gridded_1D = grid_1D( iGridFourierValues, kTraj, nPts, ...
+    'alpha', 1.5, 'W', 8 );
+  err = norm( gridded_1D(:) - rect(:), 2 ) / ...
+    norm( rect(:), 2 );
+  disp([ 'grid_1D roundtrip error: ', num2str(err) ]);
+
+  %% Make sure iGrid_1D and iGridT_1D are adjoints
+  nXPts = 10;
+  nYPts = 5;
+  kTraj = rand( nYPts, 1 ) - 0.5;
+  %dk = 1/nPts;
+  %kTraj = -0.5 : dk : 0.5-dk;
+  x = rand( nXPts, 1 );
+  y = rand( nYPts, 1 );
+  Ax = iGrid_1D( x, kTraj );
+  innerProd1 = dotP( Ax, y );
+  ATy = iGridT_1D( y, kTraj, nXPts );
+  innerProd2 = dotP( x, ATy );
+  error = abs( innerProd1 - innerProd2 );
+  disp([ 'iGrid/iGridT 1D Adjointness error:  ', num2str(error) ]);
+
+
   %% Test grid_1D
   imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
   img = double( imread( imgFile ) );
@@ -15,6 +66,7 @@ function testModules
   out = grid_1D( fftData, traj, nData, 'alpha', 1.5, 'W', 6 );
   error = norm( out - data, 2 ) / norm( data, 2 );
   disp([ 'grid_1D error: ', num2str(error) ]);
+
 
 %   %% Test grid_2D
 %   %  Test with Fourier Transform of known 2D values
@@ -33,34 +85,6 @@ function testModules
 %   error = norm( out(:) - img(:), 2 ) / norm( img(:), 2 );
 %   disp([ 'iGridT_2D error: ', num2str(error) ]);
 
-  %% Test iGrid_1D
-  nPts = 100;
-  rectWidth = 31;
-  dataCoords = (0:(nPts-1)) - ceil((nPts-1)/2);
-  rect = double( abs(dataCoords) <= rectWidth/2 )';
-  %kTraj = rand( nPts, 1 ) - 0.5;
-  dk = 1/nPts;
-  kTraj = -0.5 : dk : 0.5-dk;
-  trueFourierValues = rectWidth .* sinc( rectWidth .* kTraj );
-  iGridFourierValues = iGrid_1D( rect, kTraj, 'alpha', 1.5, 'W', 8 );
-  error = norm( trueFourierValues(:) - iGridFourierValues(:), 2 ) / ...
-          norm( trueFourierValues, 2 );
-  disp([ 'iGrid_1D error: ', num2str(error) ]);
-
-  %% Make sure iGrid_1D and iGridT_1D are adjoints
-  nXPts = 10;
-  nYPts = 5;
-  kTraj = rand( nYPts, 1 ) - 0.5;
-  %dk = 1/nPts;
-  %kTraj = -0.5 : dk : 0.5-dk;
-  x = rand( nXPts, 1 );
-  y = rand( nYPts, 1 );
-  Ax = iGrid_1D( x, kTraj );
-  innerProd1 = dotP( Ax, y );
-  ATy = iGridT_1D( y, kTraj, nXPts );
-  innerProd2 = dotP( x, ATy );
-  error = abs( innerProd1 - innerProd2 );
-  disp([ 'iGrid/iGridT 1D Adjointness error:  ', num2str(error) ]);
 
   %% Test iGrid_2D
   % iGrid_2D:  test for values when transforming known object

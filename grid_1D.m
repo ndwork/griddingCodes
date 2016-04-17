@@ -1,5 +1,25 @@
 
 function out = grid_1D( F, traj, N, varargin )
+  % F = grid_1D( F, traj, N, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
+  %
+  % MRI encoding with Inverse Gridding
+  %
+  % Inputs
+  %   F is a 1D array representing the Fourier values
+  %   traj is a M element array specifying the k-space trajectory.
+  %     The units are normalized to [-0.5,0.5).
+  %   N is the number of grid points
+  %
+  % Optional Inputs:
+  %   alpha is the oversampling factor > 1
+  %   W is the window width in pixels
+  %   nC is the number of points to sample the convolution kernel
+  %
+  % Output:
+  %   F the estimates of the Fourier coefficients along the trajectory
+  %
+  % Written by Nicholas Dwork (c) 2015
+  % Based on EE369C notes by John Pauly and Beatty et. al., IEEE TMI, 2005
 
   defaultAlpha = 1.5;
   defaultW = 8;
@@ -15,54 +35,15 @@ function out = grid_1D( F, traj, N, varargin )
   nC = p.Results.nC;
 
   nGrid = ceil( alpha * N );
+  trueAlpha = nGrid / N;
 
-  % Determine the density compensation weights
+  % % Density pre-compensation weights
+  % weights = precomp_1D( traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
   
-  % Make the Kaiser Bessel convolution kernel
-  G = nGrid;
-  [kC,C,c1D,kw] = makeKbKernel( G, nGrid, alpha, W, nC );
-
-  % Perform a circular convolution
-  gridKs = size2fftCoordinates( nGrid );
-  nTraj = numel(traj);
-  kDistThresh = 0.5*kw;
-  fftData = zeros(nGrid,1);
-  for trajIndx = 1:nTraj
-    kDists = abs( traj(trajIndx) - gridKs );
-    shortDistIndxs = find( kDists < kDistThresh );
-    shortDists = kDists( shortDistIndxs );
-    CVals = interp1( kC, C, shortDists, 'linear', 0 );
-    fftData(shortDistIndxs) = fftData(shortDistIndxs) + ...
-      F(trajIndx) * CVals;
-  end
-
-  for alt=[-1 1]
-    NewTraj = traj + alt;
-    if alt < 0
-      NewTrajIndxs = find( NewTraj > -0.5-kw/2 );
-    else
-      NewTrajIndxs = find( NewTraj < 0.5+kw/2 );
-    end
-    NewTraj = NewTraj( NewTrajIndxs );
-
-    for i=1:numel(NewTraj)
-      trajIndx = NewTrajIndxs(i);
-      NewkDists = abs( NewTraj(i) - gridKs );
-      NewShortDistIndxs = find( NewkDists < kDistThresh );
-      NewShortDists = NewkDists( NewShortDistIndxs );
-      NewCVals = interp1( kC, C, NewShortDists, 'linear', 0 );
-      fftData(NewShortDistIndxs) = fftData(NewShortDistIndxs) + ...
-        F(trajIndx) * NewCVals;
-    end
-  end
-
-  % Perform an Inverse DFT
-  paddedData = alpha/nGrid * fftshift( ifft( ifftshift( fftData ) ) );
+  paddedData = iGridT_1D( F, traj, nGrid, ...
+    'alpha', trueAlpha, 'W', W, 'nC', nC );
 
   % Crop out just the region of interest
-  data = cropData( paddedData, N );
-  croppedC1D = cropData( c1D, N );
-  
-  % Perform deapodization
-  out = data ./ transpose(croppedC1D);
+  out = 1/N * cropData( paddedData, N );
+
 end
