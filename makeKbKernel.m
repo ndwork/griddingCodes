@@ -2,7 +2,7 @@
 function [kC,C,c,kw] = makeKbKernel( G, N, varargin )
   % This function makes the Kaiser Bessel kernel; this kernel is a
   % fundamental part of the Gridding (and inverse Gridding) algorithm.
-  % [kc,C,c] = makeKbKernel( N, G,  [, 'alpha', alpha, 'W', W, 'nC', nC ] )
+  % [kc,C,c] = makeKbKernel( G, N,  [, 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % Inputs:
   %   G - the number of elements of the oversampled grid

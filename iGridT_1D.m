@@ -42,42 +42,8 @@ function out = iGridT_1D( F, traj, N, varargin )
   G = N;
   [kC,C,c1D,kw] = makeKbKernel( G, N, alpha, W, nC );
 
-  gridKs = size2fftCoordinates( N );
-
-  nTraj = numel(traj);
-  kDistThresh = 0.5*kw;
-  fftGridded = zeros( N, 1 );
-  for trajIndx=1:nTraj
-    if verbose==true && mod(trajIndx,1000)==0
-      fprintf('Working on %i of %i\n', trajIndx, nTraj );
-    end
-
-    kDists = abs( traj(trajIndx) - gridKs );
-    shortDistIndxs = find( kDists < kDistThresh );
-    shortDists = kDists( shortDistIndxs );
-    CVals = interp1( kC, C, shortDists, 'linear', 0 );
-    fftGridded(shortDistIndxs) = fftGridded(shortDistIndxs) + ...
-      F(trajIndx) * CVals;
-  end
-
-  for alt=[-1 1]
-    NewTraj = traj + alt;
-    if alt < 0
-      NewTrajIndxs = find( NewTraj > -0.5-kw/2 );
-    else
-      NewTrajIndxs = find( NewTraj < 0.5+kw/2 );
-    end
-    NewTraj = NewTraj( NewTrajIndxs );
-    for i=1:numel(NewTraj)
-      trajIndx = NewTrajIndxs(i);
-      NewkDists = abs( NewTraj(i) - gridKs );
-      NewShortDistIndxs = find( NewkDists < kDistThresh );
-      NewShortDists = NewkDists( NewShortDistIndxs );
-      NewCVals = interp1( kC, C, NewShortDists, 'linear', 0 );
-      fftGridded(NewShortDistIndxs) = fftGridded(NewShortDistIndxs) + ...
-        F(trajIndx) * NewCVals;
-    end
-  end
+  % Perform a circular convolution
+  fftGridded = applyC_1D( F, traj, N, kw, kC, C );
 
   data = fftshift( ifft( ifftshift(fftGridded) ) );
 

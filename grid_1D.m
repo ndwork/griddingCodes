@@ -1,14 +1,18 @@
 
-function out = grid_1D( F, traj, N, varargin )
-  % F = grid_1D( F, traj, N, [ 'alpha', alpha, 'W', W, 'nC', nC ] )
+function out = grid_1D( F, traj, N, weights, varargin )
+  % F = grid_1D( F, traj, N, weights, ...
+  %   [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
-  % MRI encoding with Inverse Gridding
+  % MRI reconstruction with Gridding
   %
-  % Inputs
+  % Inputs:
   %   F is a 1D array representing the Fourier values
   %   traj is a M element array specifying the k-space trajectory.
   %     The units are normalized to [-0.5,0.5).
   %   N is the number of grid points
+  %   weights is a 1D array; it is the pre-density compensation weights and
+  %     can be generated using makePrecompWeights_1D.  Alternatively, they
+  %     can be determined analytically for some sequences.
   %
   % Optional Inputs:
   %   alpha is the oversampling factor > 1
@@ -37,13 +41,10 @@ function out = grid_1D( F, traj, N, varargin )
   nGrid = ceil( alpha * N );
   trueAlpha = nGrid / N;
 
-  % % Density pre-compensation weights
-  % weights = precomp_1D( traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
-  
-  paddedData = iGridT_1D( F, traj, nGrid, ...
+  weightedF = F .* weights;
+
+  paddedData = iGridT_1D( weightedF, traj, nGrid, ...
     'alpha', trueAlpha, 'W', W, 'nC', nC );
 
-  % Crop out just the region of interest
   out = 1/N * cropData( paddedData, N );
-
 end

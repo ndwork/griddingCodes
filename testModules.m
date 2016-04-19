@@ -8,7 +8,6 @@ function testModules
   rectWidth = 31;
   dataCoords = (0:(nPts-1)) - ceil((nPts-1)/2);
   rect = double( abs(dataCoords) <= rectWidth/2 )';
-  %kTraj = rand( nPts, 1 ) - 0.5;
   dk = 1/nPts;
   kTraj = -0.5 : dk : 0.5-dk;
   trueFourierValues = rectWidth .* sinc( rectWidth .* kTraj );
@@ -17,27 +16,51 @@ function testModules
           norm( trueFourierValues, 2 );
   disp([ 'iDFT error: ', num2str(error) ]);
 
+  %% Test grid_1D
+  nTraj = 500;
+  rectWidth = 31;
+  nPts = 100;
+  dataCoords = (0:(nPts-1))' - ceil((nPts-1)/2)';
+  trueRect = double( abs(dataCoords) <= rectWidth/2 )';
+  kTraj = rand( nTraj, 1 ) - 0.5;
+  %dk = 1/nTraj;
+  %kTraj = (-0.5 : dk : 0.5-dk)';
+  F = rectWidth .* sinc( rectWidth .* kTraj );
+  %weights = ones(nTraj,1);
+  weights = makePrecompWeights_1D( kTraj, nPts );
+  gridRect = grid_1D( F, kTraj, nPts, weights );
+  err = norm( trueRect(:) - gridRect(:), 2 );
+  disp([ 'grid_1D error: ', num2str(err) ]);
+figure; plot( trueRect, 'k' ); hold on; plot( real(gridRect), 'b' );  plot( imag(gridRect), 'r' );
+figure; scatter( kTraj, weights );
+
   %% Test iGrid_1D
   nPts = 100;
   rectWidth = 31;
   dataCoords = (0:(nPts-1)) - ceil((nPts-1)/2);
   rect = double( abs(dataCoords) <= rectWidth/2 )';
-  %kTraj = rand( nPts, 1 ) - 0.5;
-  dk = 1/nPts;
-  kTraj = -0.5 : dk : 0.5-dk;
+  nTraj = 1000;
+  kTraj = rand( nTraj, 1 ) - 0.5;
+  %dk = 1/nTraj;
+  %kTraj = -0.5 : dk : 0.5-dk;
   trueFourierValues = rectWidth .* sinc( rectWidth .* kTraj );
-  iGridFourierValues = iGrid_1D( rect, kTraj, 'alpha', 1.5, 'W', 8 );
-  error = norm( trueFourierValues(:) - iGridFourierValues(:), 2 ) / ...
+  iGridFourierValues = iGrid_1D( rect, kTraj );
+  err = norm( trueFourierValues(:) - iGridFourierValues(:), 2 ) / ...
           norm( trueFourierValues, 2 );
-  disp([ 'iGrid_1D error: ', num2str(error) ]);
+  disp([ 'iGrid_1D error: ', num2str(err) ]);
 
   % Test grid_1D - roundtrip with iGrid_1D
-  gridded_1D = grid_1D( iGridFourierValues, kTraj, nPts, ...
+  weights = makePrecompWeights_1D( kTraj, nPts );
+  %weightRs = ones(numel(iGridFourierValues),1);
+  gridded_1D = grid_1D( iGridFourierValues, kTraj, nPts, weights, ...
     'alpha', 1.5, 'W', 8 );
   err = norm( gridded_1D(:) - rect(:), 2 ) / ...
     norm( rect(:), 2 );
   disp([ 'grid_1D roundtrip error: ', num2str(err) ]);
 
+figure; subplot(1,2,1); scatter( kTraj, weights );
+subplot(1,2,2); plot( rect, 'k' ); hold on; plot( real(gridded_1D),'b' ); plot( imag(gridded_1D),'r' );
+  
   %% Make sure iGrid_1D and iGridT_1D are adjoints
   nXPts = 10;
   nYPts = 5;
@@ -56,18 +79,19 @@ function testModules
 
   %% Test grid_1D
   imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
-  img = double( imread( imgFile ) );
-  img = img(1:5:end,1:5:end);
-  data = img(50,:);
-  data = transpose( data ./ max(data) );
-  nData = numel(data);
-  fftData = fftshift( fft( ifftshift( data ) ) );
-  traj = size2fftCoordinates( numel(fftData) );
-  out = grid_1D( fftData, traj, nData, 'alpha', 1.5, 'W', 6 );
-  error = norm( out - data, 2 ) / norm( data, 2 );
-  disp([ 'grid_1D error: ', num2str(error) ]);
-
-
+%   img = double( imread( imgFile ) );
+%   img = img(1:5:end,1:5:end);
+%   data = img(50,:);
+%   data = transpose( data ./ max(data) );
+%   nData = numel(data);
+%   fftData = fftshift( fft( ifftshift( data ) ) );
+%   traj = size2fftCoordinates( numel(fftData) );
+%   weights = findPrecompWeights_1D( traj, N, varargin );
+%   out = grid_1D( fftData, traj, nData, weights, 'alpha', 1.5, 'W', 6 );
+%   error = norm( out - data, 2 ) / norm( data, 2 );
+%   disp([ 'grid_1D error: ', num2str(error) ]);
+% 
+%
 %   %% Test grid_2D
 %   %  Test with Fourier Transform of known 2D values
 %   imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
