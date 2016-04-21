@@ -82,7 +82,7 @@ function F = iGrid_3D( data, traj, varargin )
     CVals = bsxfun( @times, CValsY*transpose(CValsX), ...
       reshape( CValsZ, [1 1 numel(CValsZ)] ) );
     fftVals = fftData( shortDistIndxsY, shortDistIndxsX, shortDistIndxsZ );
-    F( trajIndx ) = F( trajIndx ) + sum( fftVals(:) .* CVals(:) );
+    F( trajIndx ) = sum( fftVals(:) .* CVals(:) );
   end
 
   % Circular convolution

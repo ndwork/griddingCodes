@@ -70,7 +70,7 @@ function F = iGrid_2D( data, traj, varargin )
     CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
     CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
     kVals = fftData( shortDistIndxs );
-    F( trajIndx ) = F( trajIndx ) + sum( kVals .* CValsY .* CValsX );
+    F( trajIndx ) = sum( kVals .* CValsY .* CValsX );
   end
 
   % Circular convolution
