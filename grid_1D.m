@@ -46,5 +46,5 @@ function out = grid_1D( F, traj, N, weights, varargin )
   paddedData = iGridT_1D( weightedF, traj, nGrid, ...
     'alpha', trueAlpha, 'W', W, 'nC', nC );
 
-  out = 1/N * cropData( paddedData, N );
+  out = cropData( paddedData, N );
 end

@@ -26,13 +26,10 @@ function testModules
   %dk = 1/nTraj;
   %kTraj = (-0.5 : dk : 0.5-dk)';
   F = rectWidth .* sinc( rectWidth .* kTraj );
-  %weights = ones(nTraj,1);
   weights = makePrecompWeights_1D( kTraj, nPts );
   gridRect = grid_1D( F, kTraj, nPts, weights );
   err = norm( trueRect(:) - gridRect(:), 2 );
   disp([ 'grid_1D error: ', num2str(err) ]);
-figure; plot( trueRect, 'k' ); hold on; plot( real(gridRect), 'b' );  plot( imag(gridRect), 'r' );
-figure; scatter( kTraj, weights );
 
   %% Test iGrid_1D
   nPts = 100;
@@ -51,21 +48,19 @@ figure; scatter( kTraj, weights );
 
   % Test grid_1D - roundtrip with iGrid_1D
   weights = makePrecompWeights_1D( kTraj, nPts );
-  %weightRs = ones(numel(iGridFourierValues),1);
   gridded_1D = grid_1D( iGridFourierValues, kTraj, nPts, weights, ...
     'alpha', 1.5, 'W', 8 );
   err = norm( gridded_1D(:) - rect(:), 2 ) / ...
     norm( rect(:), 2 );
   disp([ 'grid_1D roundtrip error: ', num2str(err) ]);
-
-figure; subplot(1,2,1); scatter( kTraj, weights );
-subplot(1,2,2); plot( rect, 'k' ); hold on; plot( real(gridded_1D),'b' ); plot( imag(gridded_1D),'r' );
+  %figure; subplot(1,2,1); scatter( kTraj, weights );
+  %subplot(1,2,2); plot( rect, 'k' ); hold on; plot( real(gridded_1D),'b' ); plot( imag(gridded_1D),'r' );
   
   %% Make sure iGrid_1D and iGridT_1D are adjoints
-  nXPts = 10;
-  nYPts = 5;
+  nXPts = 100;
+  nYPts = 50;
   kTraj = rand( nYPts, 1 ) - 0.5;
-  %dk = 1/nPts;
+  %dk = 1/nYPts;
   %kTraj = -0.5 : dk : 0.5-dk;
   x = rand( nXPts, 1 );
   y = rand( nYPts, 1 );
