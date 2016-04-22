@@ -49,79 +49,18 @@ function F = iGrid_3D( data, traj, varargin )
   kws = [ kwy, kwx, kwz ];
 
   % Pre-emphasize the image
-  cImgYX = transpose(cImgY) * cImgX;
-  cImgZ_reshaped = reshape( cImgZ, [1 1 numel(cImgZ)] );
+  cImgYX = (Ny*cImgY) * transpose(Nx*cImgX);
+  cImgZ_reshaped = Nz * reshape( cImgZ, [1 1 numel(cImgZ)] );
   cImg = bsxfun( @times, cImgZ_reshaped, cImgYX );
   preEmphasized = data ./ cImg;
 
   % Perform an fft
-  fftData = 1/(nGridY*nGridX*nGridZ) * fftshift( fftn( ifftshift(preEmphasized) ) );
+  fftData = fftshift( fftn( ifftshift(preEmphasized) ) );
 
   % Perform a circular convolution
-  gridKs = size2fftCoordinates( [nGridY nGridX nGridZ] );
-  gridKy=gridKs{1};  gridKx=gridKs{2};  gridKz=gridKs{3};
-
-  nTraj = size( traj, 1 );
-  kDistThreshY = 0.5*kwy;
-  kDistThreshX = 0.5*kwx;
-  kDistThreshZ = 0.5*kwz;
-  F = zeros( nTraj, 1 );
-  for trajIndx = 1:nTraj
-    distsKy = abs( traj(trajIndx,1) - gridKy );
-    distsKx = abs( traj(trajIndx,2) - gridKx );
-    distsKz = abs( traj(trajIndx,3) - gridKz );
-    shortDistIndxsY = find( distsKy < kDistThreshY );
-    shortDistIndxsX = find( distsKx < kDistThreshX );
-    shortDistIndxsZ = find( distsKz < kDistThreshZ );
-    shortDistsKy = distsKy( shortDistIndxsY );
-    shortDistsKx = distsKx( shortDistIndxsX );
-    shortDistsKz = distsKz( shortDistIndxsZ );
-    CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
-    CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
-    CValsZ = interp1( kCz, Cz, shortDistsKz, 'linear', 0 );
-    CVals = bsxfun( @times, CValsY*transpose(CValsX), ...
-      reshape( CValsZ, [1 1 numel(CValsZ)] ) );
-    fftVals = fftData( shortDistIndxsY, shortDistIndxsX, shortDistIndxsZ );
-    F( trajIndx ) = sum( fftVals(:) .* CVals(:) );
-  end
-
-  % Circular convolution
-  onesCol = ones(nTraj,1);
-  for dim=1:3
-    alt = zeros( size(traj) );
-    alt(:,dim) = onesCol;
-
-    for altDir=[-1 1]
-      NewTraj = traj + altDir*alt;
-      if altDir < 0
-        NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim)/2 );
-      else
-        NewTrajIndxs = find( NewTraj(:,dim) < 0.5+kws(dim)/2 );
-      end
-
-      NewTraj = NewTraj( NewTrajIndxs, : );
-      for i=1:numel(NewTrajIndxs)
-        trajIndx = NewTrajIndxs(i);
-        NewDistsKy = abs( NewTraj(i,1) - gridKy );
-        NewDistsKx = abs( NewTraj(i,2) - gridKx );
-        NewDistsKz = abs( NewTraj(i,3) - gridKz );
-        NewShortDistIndxsY = find( NewDistsKy < kDistThreshY );
-        NewShortDistIndxsX = find( NewDistsKx < kDistThreshX );
-        NewShortDistIndxsZ = find( NewDistsKz < kDistThreshZ );
-        NewShortDistsKy = NewDistsKy( NewShortDistIndxsY );
-        NewShortDistsKx = NewDistsKx( NewShortDistIndxsX );
-        NewShortDistsKz = NewDistsKz( NewShortDistIndxsZ );
-        NewCValsY = interp1( kCy, Cy, NewShortDistsKy, 'linear', 0 );
-        NewCValsX = interp1( kCx, Cx, NewShortDistsKx, 'linear', 0 );
-        NewCValsZ = interp1( kCz, Cz, NewShortDistsKz, 'linear', 0 );
-        NewCVals = bsxfun( @times, NewCValsY*transpose(NewCValsX), ...
-          reshape( NewCValsZ, [1 1 numel(NewCValsZ)] ) );
-        NewFftVals = fftData( NewShortDistIndxsY, NewShortDistIndxsX, ...
-          NewShortDistIndxsZ );
-        F( trajIndx ) = F( trajIndx ) + sum( NewFftVals(:) .* NewCVals(:) );
-      end
-    end
-  end
+  N = [Ny Nx Nz];
+  F = applyCT_3D( fftData, traj, N, kws, ...
+    kCy, kCx, kCz, Cy, Cx, Cz );
 
 end
 

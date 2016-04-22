@@ -20,7 +20,7 @@ function out = grid_1D( F, traj, N, weights, varargin )
   %   nC is the number of points to sample the convolution kernel
   %
   % Output:
-  %   F the estimates of the Fourier coefficients along the trajectory
+  %   out is the uniformly spaced data in the space domain
   %
   % Written by Nicholas Dwork (c) 2015
   % Based on EE369C notes by John Pauly and Beatty et. al., IEEE TMI, 2005

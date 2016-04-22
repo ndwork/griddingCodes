@@ -3,6 +3,42 @@
 function testModules
   close all; clear; rng(1);
 
+  %% Test iGrid_3D
+  % iGrid_3D:  test for values when transforming known object
+  % The object is a simple square, which transforms to a 3D sinc
+  % The k-space trajector will be randomly selected point
+  nKPts = 500;
+  nPts = 512;
+  squareWidth = 2/100;
+  kTraj = rand( nKPts, 3 ) - 0.5;
+  rectWidth = 1/(squareWidth*0.5);
+  trueKxVals = rectWidth .* sinc( rectWidth .* kTraj(:,1) );
+  trueKyVals = rectWidth .* sinc( rectWidth .* kTraj(:,2) );
+  trueKzVals = rectWidth .* sinc( rectWidth .* kTraj(:,3) );
+  trueKVals = trueKxVals .* trueKyVals .* trueKzVals;
+  imgCoords = (0:(nPts-1)) - ceil(nPts/2);
+  [x,y,z] = meshgrid( imgCoords, imgCoords, imgCoords );
+  img = abs(x) < rectWidth*0.5 & abs(y) < rectWidth*0.5 & abs(z) < rectWidth*0.5;
+  tic;
+  kVals = iGrid_3D( img, kTraj );
+  iGrid_3D_time = toc;
+  error = norm( trueKVals - kVals, 2 ) / norm( trueKVals, 2 );
+  disp(['iGrid_3D time taken: ', num2str(iGrid_3D_time)]);
+  disp(['iGrid_3D error: ', num2str(error)]);
+
+  %% Make sure iGrid_3D and iGridT_3D are adjoints
+  sizeX = [ 50, 50, 50 ];
+  nY = 20;
+  kTraj = rand( nY, 3 ) - 0.5;
+  x = rand( sizeX );
+  y = rand( nY, 1 );
+  Ax = iGrid_3D( x, kTraj );
+  innerProd1 = dotP( Ax, y );
+  ATy = iGridT_3D( y, kTraj, sizeX );
+  innerProd2 = dotP( x, ATy );
+  error = abs( innerProd1 - innerProd2 );
+  disp([ 'iGrid/iGridT 3D Adjointness error:  ', num2str(error) ]);
+
   %% Test 2D DFT
   nPts = 100;
   rectWidth = 31;
@@ -25,19 +61,43 @@ function testModules
   disp([ '2D iDFT error: ', num2str(error) ]);
 
   %% Test iGrid_2D
-  nPts = 100;
+  nPts = 1000;
   rectWidth = 31;
-  imgCoords = size2imgCoordinates( [nPts nPts] );
+  N = [nPts nPts];
+  imgCoords = size2imgCoordinates( N );
   [x,y] = meshgrid( imgCoords{1}, imgCoords{2} );
   rect2D = double( abs(x) <= rectWidth/2 & abs(y) <= rectWidth/2 )';
-  nTraj = 10000;
-  kTraj = rand( nTraj, 2 ) - 0.5;
+  randTraj = 1;
+  if randTraj == 0
+    dk = 1/nPts;
+    ky = transpose( -0.5 : dk : 0.5-dk );
+    kx = transpose( -0.5 : dk : 0.5-dk );
+    [kx,ky] = meshgrid( ky, kx );
+    nTraj = nPts*nPts;
+    kTraj = zeros(nTraj,2);
+    kTraj(:,1) = ky(:);
+    kTraj(:,2) = kx(:);
+    load 'junk0.mat'
+  else
+    nTraj = 5000;
+    kTraj = rand( nTraj, 2 ) - 0.5;
+    load 'junk.mat'
+  end
   trueFyVals = rectWidth .* sinc( rectWidth .* kTraj(:,1) );
   trueFxVals = rectWidth .* sinc( rectWidth .* kTraj(:,2) );
   trueFVals = trueFyVals .* trueFxVals;
   iGridFVals = iGrid_2D( rect2D, kTraj );
   error = norm( trueFVals - iGridFVals, 2 ) / norm( trueFVals, 2 );
   disp(['iGrid_2D error: ', num2str(error)]);
+
+  % Test roundtrip error with gridding
+  %weights = makePrecompWeights_2D( kTraj, N );
+  gridded_2D = grid_2D( iGridFVals, kTraj, N, weights, ...
+    'alpha', 1.5, 'W', 8 );
+  err = norm( gridded_2D(:) - rect2D(:), 2 ) / ...
+    norm( rect2D(:), 2 );
+  disp([ 'grid_2D roundtrip error: ', num2str(err) ]);
+
 
   %% Make sure iGrid_2D and iGridT_2D are adjoints
   sizeX = [ 50, 50 ];
@@ -145,40 +205,8 @@ function testModules
 
 
 
-  %% Test iGrid_3D
-  % iGrid_3D:  test for values when transforming known object
-  % The object is a simple square, which transforms to a 3D sinc
-  % The k-space trajector will be randomly selected point
-  nKPts = 500;
-  nPts = 512;
-  squareWidth = 2/100;
-  kTraj = rand( nKPts, 3 ) - 0.5;
-  imgCoords = (0:(nPts-1)) - ceil(nPts/2);
-  [x,y,z] = meshgrid( imgCoords, imgCoords, imgCoords );
-  p = 1/(squareWidth*0.5);
-  img = abs(x) < p*0.5 & abs(y) < p*0.5 & abs(z) < p*0.5;
-  trueKxVals = p .* sinc( p .* kTraj(:,1) );
-  trueKyVals = p .* sinc( p .* kTraj(:,2) );
-  trueKzVals = p .* sinc( p .* kTraj(:,3) );
-  trueKVals = trueKxVals .* trueKyVals .* trueKzVals;
-  tic;
-  kVals = iGrid_3D( img, kTraj );
-  iGrid_3D_time = toc;
-  error = norm( trueKVals - kVals, 2 ) / norm( trueKVals, 2 );
-  disp(['iGrid_3D time taken: ', num2str(iGrid_3D_time)]);
-  disp(['iGrid_3D error: ', num2str(error)]);
 
-  %% Make sure iGrid_3D and iGridT_3D are adjoints
-  sizeX = [ 50, 50, 50 ];
-  nY = 20;
-  kTraj = rand( nY, 3 ) - 0.5;
-  x = rand( sizeX );
-  y = rand( nY, 1 );
-  Ax = iGrid_3D( x, kTraj );
-  innerProd1 = dotP( Ax, y );
-  ATy = iGridT_3D( y, kTraj, sizeX );
-  innerProd2 = dotP( x, ATy );
-  error = abs( innerProd1 - innerProd2 );
-  disp([ 'iGrid/iGridT 3D Adjointness error:  ', num2str(error) ]);
+
+
 end
 

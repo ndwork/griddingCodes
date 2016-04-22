@@ -10,7 +10,7 @@ function out = applyCT_2D( fftData, traj, N, kws, kCy, kCx, Cy, Cx )
   %
   % Written by Nicholas Dwork - Copyright 2016
 
-  gridKs = size2fftCoordinates( [N(1) N(2)] );
+  gridKs = size2fftCoordinates( N );
   gridKy=gridKs{1};  gridKx=gridKs{2};
   [gridKx,gridKy] = meshgrid( gridKx, gridKy );
 

@@ -52,7 +52,7 @@ function out = iGridT_2D( F, traj, N, varargin )
   kws = [ kwy kwx ];
 
   % Perform a circular convolution
-  fftGridded = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx );
+  fftGridded = applyC_2D( F, traj, [Ny Nx], kws, kCy, kCx, Cy, Cx );
 
   % Perform an inverse fft
   data = fftshift( ifft2( ifftshift(fftGridded) ) );
