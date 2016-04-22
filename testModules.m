@@ -3,6 +3,56 @@
 function testModules
   close all; clear; rng(1);
 
+  %% Test 2D DFT
+  nPts = 100;
+  rectWidth = 31;
+  imgCoords = size2imgCoordinates( [nPts nPts] );
+  [x,y] = meshgrid( imgCoords{1}, imgCoords{2} );
+  rect2D = double( abs(x) <= rectWidth/2 & abs(y) <= rectWidth/2 )';
+  dk = 1/nPts;
+  ky = transpose( -0.5 : dk : 0.5-dk );
+  kx = transpose( -0.5 : dk : 0.5-dk );
+  [kx,ky] = meshgrid( ky, kx );
+  kTraj = zeros(nPts*nPts,2);
+  kTraj(:,1) = ky(:);
+  kTraj(:,2) = kx(:);
+  trueFyVals = rectWidth .* sinc( rectWidth .* kTraj(:,1) );
+  trueFxVals = rectWidth .* sinc( rectWidth .* kTraj(:,2) );
+  trueFVals = trueFyVals .* trueFxVals;
+  DFTValues = fftshift( fft2( ifftshift(rect2D) ) );
+  error = norm( trueFVals(:) - DFTValues(:), 2 ) / ...
+          norm( trueFVals(:), 2 );
+  disp([ '2D iDFT error: ', num2str(error) ]);
+
+  %% Test iGrid_2D
+  nPts = 100;
+  rectWidth = 31;
+  imgCoords = size2imgCoordinates( [nPts nPts] );
+  [x,y] = meshgrid( imgCoords{1}, imgCoords{2} );
+  rect2D = double( abs(x) <= rectWidth/2 & abs(y) <= rectWidth/2 )';
+  nTraj = 10000;
+  kTraj = rand( nTraj, 2 ) - 0.5;
+  trueFyVals = rectWidth .* sinc( rectWidth .* kTraj(:,1) );
+  trueFxVals = rectWidth .* sinc( rectWidth .* kTraj(:,2) );
+  trueFVals = trueFyVals .* trueFxVals;
+  iGridFVals = iGrid_2D( rect2D, kTraj );
+  error = norm( trueFVals - iGridFVals, 2 ) / norm( trueFVals, 2 );
+  disp(['iGrid_2D error: ', num2str(error)]);
+
+  %% Make sure iGrid_2D and iGridT_2D are adjoints
+  sizeX = [ 50, 50 ];
+  nY = 20;
+  kTraj = rand( nY, 2 ) - 0.5;
+  x = rand( sizeX );
+  y = rand( nY, 1 );
+  Ax = iGrid_2D( x, kTraj );
+  innerProd1 = dotP( Ax, y );
+  ATy = iGridT_2D( y, kTraj, sizeX );
+  innerProd2 = dotP( x, ATy );
+  error = abs( innerProd1 - innerProd2 );
+  disp([ 'iGrid/iGridT 2D Adjointness error:  ', num2str(error) ]);
+
+
   %% Test DFT
   nPts = 100;
   rectWidth = 31;
@@ -55,7 +105,7 @@ function testModules
   disp([ 'grid_1D roundtrip error: ', num2str(err) ]);
   %figure; subplot(1,2,1); scatter( kTraj, weights );
   %subplot(1,2,2); plot( rect, 'k' ); hold on; plot( real(gridded_1D),'b' ); plot( imag(gridded_1D),'r' );
-  
+
   %% Make sure iGrid_1D and iGridT_1D are adjoints
   nXPts = 100;
   nYPts = 50;
@@ -72,24 +122,10 @@ function testModules
   disp([ 'iGrid/iGridT 1D Adjointness error:  ', num2str(error) ]);
 
 
-  %% Test grid_1D
-  imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
-%   img = double( imread( imgFile ) );
-%   img = img(1:5:end,1:5:end);
-%   data = img(50,:);
-%   data = transpose( data ./ max(data) );
-%   nData = numel(data);
-%   fftData = fftshift( fft( ifftshift( data ) ) );
-%   traj = size2fftCoordinates( numel(fftData) );
-%   weights = findPrecompWeights_1D( traj, N, varargin );
-%   out = grid_1D( fftData, traj, nData, weights, 'alpha', 1.5, 'W', 6 );
-%   error = norm( out - data, 2 ) / norm( data, 2 );
-%   disp([ 'grid_1D error: ', num2str(error) ]);
-% 
-%
+
 %   %% Test grid_2D
 %   %  Test with Fourier Transform of known 2D values
-%   imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
+  imgFile = '/Applications/MATLAB_R2013a_Student.app/toolbox/images/imdemos/moon.tif';
 %   img = double( imread( imgFile ) );
 %   img = img(1:5:end,1:5:end);
 %   fftImg = fftshift( fft2( ifftshift( img ) ) );
@@ -105,40 +141,9 @@ function testModules
 %   disp([ 'iGridT_2D error: ', num2str(error) ]);
 
 
-  %% Test iGrid_2D
-  % iGrid_2D:  test for values when transforming known object
-  % The object is a simple square, which transforms to a 2D sinc
-  % The k-space trajector will be randomly selected point
-  nKPts = 500;
-  nPts = 512;
-  squareWidth = 2/100;
-  kTraj = rand( nKPts, 2 ) - 0.5;
-  imgCoords = (0:(nPts-1)) - ceil(nPts/2);
-  [x,y] = meshgrid( imgCoords, imgCoords );
-  p = 1/(squareWidth*0.5);
-  img = abs(x) < p*0.5 & abs(y) < p*0.5;
-  trueKxVals = p .* sinc( p .* kTraj(:,1) );
-  trueKyVals = p .* sinc( p .* kTraj(:,2) );
-  trueKVals = trueKxVals .* trueKyVals;
-  tic;
-  kVals = iGrid_2D( img, kTraj );
-  iGrid_2D_time = toc;
-  error = norm( trueKVals - kVals, 2 ) / norm( trueKVals, 2 );
-  disp(['iGrid_2D time take: ', num2str(iGrid_2D_time)]);
-  disp(['iGrid_2D error: ', num2str(error)]);
 
-  %% Make sure iGrid_2D and iGridT_2D are adjoints
-  sizeX = [ 50, 50 ];
-  nY = 20;
-  kTraj = rand( nY, 2 ) - 0.5;
-  x = rand( sizeX );
-  y = rand( nY, 1 );
-  Ax = iGrid_2D( x, kTraj );
-  innerProd1 = dotP( Ax, y );
-  ATy = iGridT_2D( y, kTraj, sizeX );
-  innerProd2 = dotP( x, ATy );
-  error = abs( innerProd1 - innerProd2 );
-  disp([ 'iGrid/iGridT 2D Adjointness error:  ', num2str(error) ]);
+
+
 
   %% Test iGrid_3D
   % iGrid_3D:  test for values when transforming known object

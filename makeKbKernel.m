@@ -29,7 +29,7 @@ function [kC,C,c,kw] = makeKbKernel( G, N, varargin )
   nC = p.Results.nC;
 
   kw = W/G;
-  kC = linspace(0, 0.5*kw, nC);
+  kC = transpose(linspace(0, 0.5*kw, nC));
 
   beta = pi * sqrt( W*W/(alpha*alpha) * (alpha-0.5)^2 - 0.8 );
   C = 1/kw * besseli( 0, beta * sqrt( 1 - ( 2*kC/kw ).^2 ) );

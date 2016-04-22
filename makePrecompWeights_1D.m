@@ -46,7 +46,7 @@ function [weights,lsqrFlag] = makePrecompWeights_1D( traj, N, varargin )
     end
   end
 
-  b = zeros(nGrid,1);  b(1) = 1;  b=fftshift(b);
+  b=zeros(nGrid,1);  b(1)=1;  b=fftshift(b);
   [weights,lsqrFlag] = lsqr( @applyA, b, 1d-5, 1000 );
 end
 

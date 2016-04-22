@@ -35,7 +35,6 @@ function out = iGridT_1D( F, traj, N, varargin )
   alpha = p.Results.alpha;
   W = p.Results.W;
   nC = p.Results.nC;
-  verbose = p.Results.verbose;
 
 
   % Make the Kaiser Bessel convolution kernel
@@ -48,6 +47,6 @@ function out = iGridT_1D( F, traj, N, varargin )
   data = fftshift( ifft( ifftshift(fftGridded) ) );
 
   % Perform deapodization
-  out = data ./ transpose(c1D);
+  out = data ./ c1D;
 end
 

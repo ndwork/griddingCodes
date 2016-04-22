@@ -1,6 +1,6 @@
 
 function out = applyC_1D( F, traj, N, kw, kC, C )
-  % out = applyC_1D( N, F, traj, kw, kC, C )
+  % out = applyC_1D( F, traj, N, kw, kC, C )
   %
   % Written by Nicholas Dwork - Copyright 2016
 

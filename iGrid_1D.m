@@ -40,12 +40,12 @@ function F = iGrid_1D( data, traj, varargin )
   [kC,C,c1D,kw] = makeKbKernel( G, N, alpha, W, nC );
 
   % Pre-emphasize the image
-  preEmphasized = data ./ ( N * transpose(c1D) );
+  preEmphasized = data ./ ( N * c1D );
 
   % Perform DFT
   fftData = fftshift( fft( ifftshift(preEmphasized) ) );
 
-  % Perform a circular convolution;
+  % Perform a circular convolution
   F = applyCT_1D( fftData, traj, N, kw, kC, C );
 
 end
