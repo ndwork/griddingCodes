@@ -14,9 +14,8 @@ function out = applyCT_2D( fftData, traj, N, kws, kCy, kCx, Cy, Cx )
   gridKy=gridKs{1};  gridKx=gridKs{2};
   [gridKx,gridKy] = meshgrid( gridKx, gridKy );
 
-  kwy=kws(1);  kwx=kws(2);
-  kDistThreshY = 0.5*kwy;
-  kDistThreshX = 0.5*kwx;
+  kDistThreshY = 0.5*kws(1);
+  kDistThreshX = 0.5*kws(2);
 
   nTraj = size( traj, 1 );
   out = zeros( nTraj, 1 );

@@ -43,8 +43,7 @@ function out = iGridT_2D( F, traj, N, varargin )
   W = p.Results.W;
   nC = p.Results.nC;
 
-
-  % Make the convolution kernel
+  % Make the Kaiser Bessel convolution kernel
   Gy = Ny;
   [kCy,Cy,cImgY,kwy] = makeKbKernel( Gy, Ny, alpha, W, nC );
   Gx = Nx;

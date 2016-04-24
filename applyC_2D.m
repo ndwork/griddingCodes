@@ -4,17 +4,14 @@ function out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx )
   %
   % Written by Nicholas Dwork - Copyright 2016
 
-  Ny = N(1);  kwy=kws(1);
-  Nx = N(2);  kwx=kws(2);
-
-  gridKs = size2fftCoordinates([ Ny Nx ]);
+  gridKs = size2fftCoordinates( N );
   gridKy=gridKs{1};  gridKx=gridKs{2};
   [gridKx,gridKy] = meshgrid(gridKx,gridKy);
 
   nTraj = size(traj,1);
-  kDistThreshY = 0.5*kwy;
-  kDistThreshX = 0.5*kwx;
-  out = zeros( [Ny Nx] );
+  kDistThreshY = 0.5*kws(1);
+  kDistThreshX = 0.5*kws(2);
+  out = zeros(N);
   for trajIndx=1:nTraj
     distsKy = abs( traj(trajIndx,1) - gridKy );
     distsKx = abs( traj(trajIndx,2) - gridKx );
