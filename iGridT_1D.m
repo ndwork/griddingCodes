@@ -36,7 +36,6 @@ function out = iGridT_1D( F, traj, N, varargin )
   W = p.Results.W;
   nC = p.Results.nC;
 
-
   % Make the Kaiser Bessel convolution kernel
   G = N;
   [kC,C,c1D,kw] = makeKbKernel( G, N, alpha, W, nC );

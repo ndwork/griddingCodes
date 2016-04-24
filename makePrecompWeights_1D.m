@@ -37,16 +37,26 @@ function [weights,lsqrFlag] = makePrecompWeights_1D( traj, N, varargin )
   W = p.Results.W;
   nC = p.Results.nC;
 
+  iteration = 0;
   nGrid = ceil( alpha * N );
+  trueAlpha = nGrid / N;
   function out = applyA( in, type )
     if nargin > 1 && strcmp( type, 'transp' )
-      out = iGrid_1D( in, traj, 'alpha', alpha, 'W', W, 'nC', nC );
+      out = iGrid_1D( in, traj, 'alpha', trueAlpha, ...
+        'W', W, 'nC', nC );
+      if mod( iteration, 5 ) == 0
+        disp(['lsqr working on iteration ', num2str(iteration) ]);
+      end
+      iteration = iteration + 1;
     else
-      out = iGridT_1D( in, traj, nGrid, 'alpha', alpha, 'W', W, 'nC', nC );
+      out = iGridT_1D( in, traj, nGrid, 'alpha', trueAlpha, ...
+        'W', W, 'nC', nC );
     end
   end
 
   b=zeros(nGrid,1);  b(1)=1;  b=fftshift(b);
-  [weights,lsqrFlag] = lsqr( @applyA, b, 1d-5, 1000 );
+  tolerance = 1d-5;
+  maxIter = 1000;
+  [weights,lsqrFlag] = lsqr( @applyA, b, tolerance, maxIter );
 end
 

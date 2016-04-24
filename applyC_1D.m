@@ -13,8 +13,7 @@ function out = applyC_1D( F, traj, N, kw, kC, C )
     shortDistIndxs = find( kDists < kDistThresh );
     shortDists = kDists( shortDistIndxs );
     CVals = interp1( kC, C, shortDists, 'linear', 0 );
-    out(shortDistIndxs) = out(shortDistIndxs) + ...
-      F(trajIndx) * CVals;
+    out(shortDistIndxs) = out(shortDistIndxs) + F(trajIndx) * CVals;
   end
 
   for alt=[-1 1]
@@ -24,6 +23,7 @@ function out = applyC_1D( F, traj, N, kw, kC, C )
     else
       NewTrajIndxs = find( NewTraj < 0.5+kw/2 );
     end
+
     NewTraj = NewTraj( NewTrajIndxs );
     for i=1:numel(NewTraj)
       trajIndx = NewTrajIndxs(i);

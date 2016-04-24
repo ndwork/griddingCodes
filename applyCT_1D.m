@@ -5,9 +5,11 @@ function out = applyCT_1D( fftData, traj, N, kw, kC, C )
   % Written by Nicholas Dwork - Copyright 2016
 
   gridKs = size2fftCoordinates( N );
-  nTraj = numel(traj);
-  out = zeros( nTraj, 1 );
+  
   kDistThresh = 0.5*kw;
+
+  nTraj = numel( traj );
+  out = zeros( nTraj, 1 );  
   for trajIndx = 1:nTraj
     kDists = abs( traj(trajIndx) - gridKs );
     shortDistIndxs = find( kDists < kDistThresh );
