@@ -45,13 +45,11 @@ function [weights,lsqrFlag] = makePrecompWeights_3D( traj, N, varargin )
   function out = applyA( in, type )
     if nargin > 1 && strcmp( type, 'transp' )
       in = reshape( in, nGrid );
-      out = iGrid_3D( in, traj, 'alpha', trueAlpha, ...
-        'W', W, 'nC', nC );
+      out = iGrid_3D( in, traj, 'alpha', trueAlpha, 'W', W, 'nC', nC );
       disp(['lsqr working on iteration ', num2str(iteration) ]);
       iteration = iteration + 1;
     else
-      out = iGridT_3D( in, traj, nGrid, 'alpha', trueAlpha, ...
-        'W', W, 'nC', nC );
+      out = iGridT_3D( in, traj, nGrid, 'alpha', trueAlpha, 'W', W, 'nC', nC );
       out = out(:);
     end
   end
