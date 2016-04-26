@@ -1,6 +1,7 @@
 
-function [weights,lsqrFlag] = makePrecompWeights_2D( traj, N, varargin )
-  % [weights,lsqrFlag] = makePrecompWeights_2D( traj, N, ...
+function [weights,lsqrFlag,lsqrRes] = makePrecompWeights_2D( ...
+  traj, N, varargin )
+  % [weights,lsqrFlag,lsqrRes] = makePrecompWeights_2D( traj, N, ...
   %   [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % Determine the density pre-compensation weights to be used in gridding
@@ -22,6 +23,7 @@ function [weights,lsqrFlag] = makePrecompWeights_2D( traj, N, varargin )
   % Optional Outputs:
   %   lsqrFlag - flag describing results of lsqr optimization (see lsqr
   %     documentation)
+  %   lsqrRes - lsqr residual
   %
   % Written by Nicholas Dwork - Copyright 2016
 
@@ -46,9 +48,7 @@ function [weights,lsqrFlag] = makePrecompWeights_2D( traj, N, varargin )
       in = reshape( in, nGrid );
       out = iGrid_2D( in, traj, 'alpha', trueAlpha, ...
         'W', W, 'nC', nC );
-      if mod( iteration, 5 ) == 0
-        disp(['lsqr working on iteration ', num2str(iteration) ]);
-      end
+      disp(['lsqr working on iteration ', num2str(iteration) ]);
       iteration = iteration + 1;
     else
       out = iGridT_2D( in, traj, nGrid, 'alpha', trueAlpha, ...
@@ -57,9 +57,9 @@ function [weights,lsqrFlag] = makePrecompWeights_2D( traj, N, varargin )
     end
   end
 
-  b=zeros(nGrid);  b(1)=1;  b=fftshift(b);
+  b=zeros(nGrid);  b(1,1)=1;  b=fftshift(b);
   tolerance = 1d-5;
   maxIter = 1000;
-  [weights,lsqrFlag] = lsqr( @applyA, b(:), tolerance, maxIter );
+  [weights,lsqrFlag,lsqrRes] = lsqr( @applyA, b(:), tolerance, maxIter );
 end
 

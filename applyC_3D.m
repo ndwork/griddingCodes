@@ -36,7 +36,6 @@ function out = applyC_3D( F, traj, N, kws, kCy, kCx, kCz, Cy, Cx, Cz )
       F(trajIndx) * CVals;
   end
 
-  % Circular convolution
   onesCol = ones(nTraj,1);
   for dim=1:3
     alt = zeros( size(traj) );

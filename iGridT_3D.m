@@ -43,24 +43,18 @@ function out = iGridT_3D( F, traj, N, varargin )
   W = p.Results.W;
   nC = p.Results.nC;
 
-  nGridY = Ny;
-  nGridX = Nx;
-  nGridZ = Nz;
-
-  %% Make the convolution kernel
-  Gy = nGridY;
+  % Make the convolution kernel
+  Gy = Ny;
   [kCy,Cy,cImgY,kwy] = makeKbKernel( Gy, Ny, alpha, W, nC );
-  Gx = nGridX;
+  Gx = Nx;
   [kCx,Cx,cImgX,kwx] = makeKbKernel( Gx, Nx, alpha, W, nC );
-  Gz = nGridZ;
+  Gz = Nz;
   [kCz,Cz,cImgZ,kwz] = makeKbKernel( Gz, Nz, alpha, W, nC );
   kws = [ kwy kwx kwz ];
 
-  gridKs = size2fftCoordinates([ nGridY nGridX nGridZ ]);
-  gridKy=gridKs{1};  gridKx=gridKs{2};  gridKz=gridKs{3};
-
   % Perform Adjoint of Circular Convolution
-  fftGridded = applyC_3D( F, traj, N, kws, kCy, kCx, kCz, Cy, Cx, Cz );
+  fftGridded = applyC_3D( F, traj, [Ny Nx Nz], kws, ...
+    kCy, kCx, kCz, Cy, Cx, Cz );
 
   % Perform an inverse fft
   data = fftshift( ifftn( ifftshift(fftGridded) ) );

@@ -37,15 +37,12 @@ function F = iGrid_3D( data, traj, varargin )
   [Ny,Nx,Nz] = size( data );
 
   % Make the convolution kernel
-  nGridY = Ny;
-  Gy = nGridY;
-  [kCy,Cy,cImgY,kwy] = makeKbKernel( Gy, nGridY, alpha, W, nC );
-  nGridX = Nx;
-  Gx = nGridX;
-  [kCx,Cx,cImgX,kwx] = makeKbKernel( Gx, nGridX, alpha, W, nC );
-  nGridZ = Nz;
-  Gz = nGridZ;
-  [kCz,Cz,cImgZ,kwz] = makeKbKernel( Gz, nGridZ, alpha, W, nC );
+  Gy = Ny;
+  [kCy,Cy,cImgY,kwy] = makeKbKernel( Gy, Ny, alpha, W, nC );
+  Gx = Nx;
+  [kCx,Cx,cImgX,kwx] = makeKbKernel( Gx, Nx, alpha, W, nC );
+  Gz = Nz;
+  [kCz,Cz,cImgZ,kwz] = makeKbKernel( Gz, Nz, alpha, W, nC );
   kws = [ kwy, kwx, kwz ];
 
   % Pre-emphasize the image
@@ -59,8 +56,7 @@ function F = iGrid_3D( data, traj, varargin )
 
   % Perform a circular convolution
   N = [Ny Nx Nz];
-  F = applyCT_3D( fftData, traj, N, kws, ...
-    kCy, kCx, kCz, Cy, Cx, Cz );
+  F = applyCT_3D( fftData, traj, N, kws, kCy, kCx, kCz, Cy, Cx, Cz );
 
 end
 

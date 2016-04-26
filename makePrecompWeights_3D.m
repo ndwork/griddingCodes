@@ -1,14 +1,16 @@
 
-function [weights,lsqrFlag] = makePrecompWeights_1D( traj, N, varargin )
-  % [weights,lsqrFlag] = makePrecompWeights_1D( traj, N, ...
+function [weights,lsqrFlag] = makePrecompWeights_3D( traj, N, varargin )
+  % [weights,lsqrFlag] = makePrecompWeights_3D( traj, N, ...
   %   [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % Determine the density pre-compensation weights to be used in gridding
   %
   % Inputs:
-  %   traj is a M element array specifying the k-space trajectory.
+  %   traj is a Mx3 element array specifying the k-space trajectory.
+  %     The first/second column is the ky/kx/kz location.
   %     The units are normalized to [-0.5,0.5)
-  %   N is the number of grid points
+  %   N is a 3 element array [Ny Nx Nz] representing the number of 
+  %     grid points
   %
   % Optional Inputs:
   %   alpha is the oversampling factor > 1
@@ -39,22 +41,24 @@ function [weights,lsqrFlag] = makePrecompWeights_1D( traj, N, varargin )
 
   iteration = 0;
   nGrid = ceil( alpha * N );
-  trueAlpha = nGrid / N;
+  trueAlpha = max( nGrid ./ N );
   function out = applyA( in, type )
     if nargin > 1 && strcmp( type, 'transp' )
-      out = iGrid_1D( in, traj, 'alpha', trueAlpha, ...
+      in = reshape( in, nGrid );
+      out = iGrid_3D( in, traj, 'alpha', trueAlpha, ...
         'W', W, 'nC', nC );
-      %disp(['lsqr working on iteration ', num2str(iteration) ]);
-      %iteration = iteration + 1;
+      disp(['lsqr working on iteration ', num2str(iteration) ]);
+      iteration = iteration + 1;
     else
-      out = iGridT_1D( in, traj, nGrid, 'alpha', trueAlpha, ...
+      out = iGridT_3D( in, traj, nGrid, 'alpha', trueAlpha, ...
         'W', W, 'nC', nC );
+      out = out(:);
     end
   end
 
-  b=zeros(nGrid,1);  b(1)=1;  b=fftshift(b);
+  b=zeros(nGrid);  b(1)=1;  b=fftshift(b);
   tolerance = 1d-5;
   maxIter = 1000;
-  [weights,lsqrFlag] = lsqr( @applyA, b, tolerance, maxIter );
+  [weights,lsqrFlag] = lsqr( @applyA, b(:), tolerance, maxIter );
 end
 

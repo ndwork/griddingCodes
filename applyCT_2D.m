@@ -19,7 +19,7 @@ function out = applyCT_2D( fftData, traj, N, kws, kCy, kCx, Cy, Cx )
 
   nTraj = size( traj, 1 );
   out = zeros( nTraj, 1 );
-  for trajIndx = 1:nTraj
+  parfor trajIndx = 1:nTraj
     distsKy = abs( traj(trajIndx,1) - gridKy );
     distsKx = abs( traj(trajIndx,2) - gridKx );
     shortDistIndxs = find( distsKy < kDistThreshY & distsKx < kDistThreshX );

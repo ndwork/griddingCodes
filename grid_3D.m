@@ -1,6 +1,6 @@
 
-function out = grid_2D( F, traj, N, weights, varargin )
-  % F = grid_2D( F, traj, N, weights, ...
+function out = grid_3D( F, traj, N, weights, varargin )
+  % F = grid_3D( F, traj, N, weights, ...
   %   [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % MRI reconstruction with Gridding
@@ -44,7 +44,7 @@ function out = grid_2D( F, traj, N, weights, varargin )
 
   weightedF = F .* weights;
 
-  paddedData = iGridT_2D( weightedF, traj, nGrid, ...
+  paddedData = iGridT_3D( weightedF, traj, nGrid, ...
     'alpha', trueAlpha, 'W', W, 'nC', nC );
   
   out = cropData( paddedData, N );
