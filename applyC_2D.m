@@ -1,18 +1,23 @@
 
-function out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx )
-  % out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx )
+function out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx, gridKs )
+  % out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx [, gridKs ] )
   %
   % Written by Nicholas Dwork - Copyright 2016
 
-  gridKs = size2fftCoordinates( N );
-  gridKy=gridKs{1};  gridKx=gridKs{2};
-  [gridKx,gridKy] = meshgrid(gridKx,gridKy);
+  if nargin < 9
+    gridKs = size2fftCoordinates( N );
+    gridKy=gridKs{1};  gridKx=gridKs{2};
+    [gridKx,gridKy] = meshgrid(gridKx,gridKy);
+  else
+    gridKy = gridKs(:,1);
+    gridKx = gridKs(:,2);
+  end
 
   nTraj = size(traj,1);
   kDistThreshY = 0.5*kws(1);
   kDistThreshX = 0.5*kws(2);
-  out = zeros(N);
-  for trajIndx=1:nTraj
+  tmp = cell(nTraj,1);
+  parfor trajIndx=1:nTraj
     %if mod( trajIndx, 100 )==0
     %  disp(['applyC_2D: working on iteration ', num2str(trajIndx), ...
     %    ' of ', num2str(nTraj) ]);
@@ -25,8 +30,19 @@ function out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx )
     shortDistsKx = distsKx( shortDistIndxs );
     CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
     CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
-    out(shortDistIndxs) = out(shortDistIndxs) + ...
-      F(trajIndx) * ( CValsY .* CValsX );
+    %out(shortDistIndxs) = out(shortDistIndxs) + ...
+    %  F(trajIndx) * ( CValsY .* CValsX );
+
+    tmp{trajIndx} = struct( ...
+      'indxs', shortDistIndxs, ...
+      'values', F(trajIndx) * ( CValsY .* CValsX ) ...
+    );
+  end
+
+  out = zeros( size(gridKy) );
+  for trajIndx=1:nTraj
+    out( tmp{trajIndx}.indxs ) = out( tmp{trajIndx}.indxs ) + ...
+      tmp{trajIndx}.values;
   end
 
   onesCol = ones(nTraj,1);
