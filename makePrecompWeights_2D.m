@@ -130,17 +130,7 @@ tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
   maxIter = 1000;
   [weights,lsFlag,lsRes] = lsqr( @applyA, b(:), tolerance, maxIter );
 
-psf = iGridT_2D( weights, traj, 2*N, 'alpha', 2.0, 'W', W, 'nC', nC );
-radialImg = makeRadialImg( size(psf) );
-mask = radialImg <= min(N);
-psf = mask .* psf;
-psf = cropData( psf, 2*N );
-psf = psf ./ max(psf(:));
-b=zeros(size(psf)); b(1,1)=1; b=fftshift(b);
-mse = sum( abs( mask(:).*psf(:) - mask(:).*b(:) ).^2 ) ./ sum(mask(:));
-disp(['MSE: ', num2str(mse)]);
-tmp=abs(psf);  tmp=tmp./max(tmp(:)); tmp=20*log10(tmp);
-tmp(~isfinite(tmp))=0; imshow( imresize(tmp,3,'nearest'), [-100 0] );
+  showPSF( weights, traj, N );
 end
 
 
@@ -193,18 +183,7 @@ function [weights,flag,res] = makePrecompWeights_2D_FP( ...
     end
   end
 
-psf = iGridT_2D( weights, traj, 2*N, 'alpha', 2.0, 'W', W, 'nC', nC );
-radialImg = makeRadialImg( size(psf) );
-mask = radialImg <= min(N);
-psf = mask .* psf;
-psf = cropData( psf, 2*N );
-psf = psf ./ max(psf(:));
-b=zeros(size(psf)); b(1,1)=1; b=fftshift(b);
-mse = sum( abs( mask(:).*psf(:) - mask(:).*b(:) ).^2 ) ./ sum(mask(:));
-disp(['MSE: ', num2str(mse)]);
-tmp=abs(psf);  tmp=tmp./max(tmp(:)); tmp=20*log10(tmp);
-tmp(~isfinite(tmp))=0; imshow( imresize(tmp,3,'nearest'), [-100 0] );
-
+  showPSF( weights, traj, N );
 end
 
 
@@ -260,18 +239,8 @@ tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
   maxIter = 1000;
   [weights,lsFlag,lsRes] = lsqr( @applyA, b(:), tolerance, maxIter );
 
-psf = iGridT_2D( weights, traj, nGrid, 'alpha', 2.0, 'W', W, 'nC', nC );
-psf = cropData( psf, 2*N );
-mask = cropData( mask, 2*N );
-psf = mask .* psf;
-psf = psf ./ max(psf(:));
-b=zeros(size(psf)); b(1,1)=1; b=fftshift(b);
-mse = sum( abs( mask(:).*psf(:) - mask(:).*b(:) ).^2 ) ./ sum(mask(:));
-disp(['MSE: ', num2str(mse)]);
-tmp=abs(psf);  tmp=tmp./max(tmp(:)); tmp=20*log10(tmp);
-tmp(~isfinite(tmp))=0; imshow( imresize(tmp,3,'nearest'), [-100 0] );
+  showPSF( weights, traj, N, mask );
 end
-
 
 
 function areas = voronoidens(kTraj)
