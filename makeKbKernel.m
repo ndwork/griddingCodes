@@ -1,5 +1,5 @@
 
-function [kC,C,c,kw] = makeKbKernel( G, N, varargin )
+function [kC,C,c] = makeKbKernel( G, N, varargin )
   % This function makes the Kaiser Bessel kernel; this kernel is a
   % fundamental part of the Gridding (and inverse Gridding) algorithm.
   % [kc,C,c] = makeKbKernel( G, N,  [, 'alpha', alpha, 'W', W, 'nC', nC ] )

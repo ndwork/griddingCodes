@@ -1,10 +1,10 @@
 
-function out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx, gridKs )
-  % out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx [, gridKs ] )
+function out = applyC_2D( F, traj, N, kCy, kCx, Cy, Cx, gridKs )
+  % out = applyC_2D( F, traj, N, kCy, kCx, Cy, Cx [, gridKs ] )
   %
   % Written by Nicholas Dwork - Copyright 2016
 
-  if nargin < 9
+  if nargin < 8
     gridKs = size2fftCoordinates( N );
     gridKy=gridKs{1};  gridKx=gridKs{2};
     [gridKx,gridKy] = meshgrid(gridKx,gridKy);
@@ -14,8 +14,9 @@ function out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx, gridKs )
   end
 
   nTraj = size(traj,1);
-  kDistThreshY = 0.5*kws(1);
-  kDistThreshX = 0.5*kws(2);
+  kws = [ max(kCy), max(kCx) ];
+  kDistThreshY = kws(1);
+  kDistThreshX = kws(2);
   tmp = cell(nTraj,1);
   parfor trajIndx=1:nTraj
     %if mod( trajIndx, 100 )==0
@@ -53,9 +54,9 @@ function out = applyC_2D( F, traj, N, kws, kCy, kCx, Cy, Cx, gridKs )
     for altDir=[-1 1]
       NewTraj = traj + altDir*alt;
       if altDir < 0
-        NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim)/2 );
+        NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim) );
       else
-        NewTrajIndxs = find( NewTraj(:,dim) < 0.5+kws(dim)/2 );
+        NewTrajIndxs = find( NewTraj(:,dim) < 0.5+kws(dim) );
       end
 
       NewTraj = NewTraj( NewTrajIndxs, : );

@@ -144,7 +144,6 @@ function testModules
 %   disp([ 'iGrid/iGridT 2D Adjointness error:  ', num2str(error) ]);
 
 
-
   %% Test iGrid_2D
   nPts = 64;
   rectWidth = 31;
@@ -154,8 +153,8 @@ function testModules
   rect2D = double( abs(x) <= rectWidth/2 & abs(y) <= rectWidth/2 )';
   N = size( rect2D );
 
-  kTraj = makeTrajPts( 2, 'random', nPts*nPts );
-  %kTraj = makeTrajPts( 2, 'radial', 360, 50 );
+  %kTraj = makeTrajPts( 2, 'random', nPts*nPts );
+  kTraj = makeTrajPts( 2, 'radial', 360, 50 );
   %kTraj = makeTrajPts( 2, 'spinWarp', 1/nPts );
   %kTraj = makeTrajPts( 2, 'poissonDisc', 1/nPts );
   %plot( kTraj(:,1), kTraj(:,2), 'o', 'MarkerFaceColor', 'k', ...
@@ -173,8 +172,9 @@ function testModules
 
   % Test roundtrip error with gridding
   %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'cls' );
-  %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'ls' );
-  weights = makePrecompWeights_2D( kTraj, N, 'alg', 'fp' );
+  %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'fp' );
+  weights = makePrecompWeights_2D( kTraj, N, 'alg', 'ls' );
+  %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'rls' );
   %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'vor' );
 %load( 'weights_64x64_rand.mat' );
   tic;

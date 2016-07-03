@@ -38,10 +38,9 @@ function F = iGrid_2D( data, traj, varargin )
 
   % Make the Kaiser Bessel convolution kernel
   Gy = Ny;
-  [kCy,Cy,cImgY,kwy] = makeKbKernel( Gy, Ny, alpha, W, nC );
+  [kCy,Cy,cImgY] = makeKbKernel( Gy, Ny, alpha, W, nC );
   Gx = Nx;
-  [kCx,Cx,cImgX,kwx] = makeKbKernel( Gx, Nx, alpha, W, nC );
-  kws = [ kwy kwx ];
+  [kCx,Cx,cImgX] = makeKbKernel( Gx, Nx, alpha, W, nC );
 
   % Pre-emphasize the image
   denom = (Ny*cImgY) * transpose(Nx*cImgX);
@@ -52,7 +51,7 @@ function F = iGrid_2D( data, traj, varargin )
 
   % Perform a circular convolution
   N = [Ny Nx];
-  F = applyCT_2D( fftData, traj, N, kws, kCy, kCx, Cy, Cx );
+  F = applyCT_2D( fftData, traj, N, kCy, kCx, Cy, Cx );
 
 end
 

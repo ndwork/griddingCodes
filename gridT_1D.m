@@ -1,12 +1,12 @@
 
-function out = grid_2D( F, traj, N, weights, varargin )
-  % F = grid_2D( F, traj, N, weights, ...
+function out = gridT_1D( in, traj, N, weights, varargin )
+  % out = gridT_1D( in, traj, N, weights, ...
   %   [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
-  % Image reconstruction with Gridding
+  % MRI reconstruction with Gridding
   %
   % Inputs:
-  %   F is a 1D array representing the Fourier values
+  %   in is a 1D array representing the Fourier values
   %   traj is a Mx2 element array specifying the k-space trajectory.
   %     The first/second column are the kx/ky locations.
   %     The units are normalized to [-0.5,0.5).
@@ -42,9 +42,7 @@ function out = grid_2D( F, traj, N, weights, varargin )
   nGrid = ceil( alpha * N );
   trueAlpha = max( nGrid ./ N );
 
-  weightedF = F .* weights;
-  padded = iGridT_2D( weightedF, traj, nGrid, ...
-    'alpha', trueAlpha, 'W', W, 'nC', nC );
-  out = cropData( padded, N );
+  padded = padData(in, nGrid);
+  tmp = iGrid_1D( padded, traj, 'alpha', trueAlpha, 'W', W, 'nC', nC );
+  out = tmp .* weights;
 end
-
