@@ -1,11 +1,12 @@
 
-function out = applyC_1D( F, traj, N, kw, kC, C )
-  % out = applyC_1D( F, traj, N, kw, kC, C )
+function out = applyC_1D( F, traj, N, kC, C )
+  % out = applyC_1D( F, traj, N, kC, C )
   %
   % Written by Nicholas Dwork - Copyright 2016
 
   gridKs = size2fftCoordinates( N );
   nTraj = numel(traj);
+  kw = max(kC);
   kDistThresh = 0.5*kw;
   out = zeros( N, 1 );
   for trajIndx=1:nTraj
@@ -19,9 +20,9 @@ function out = applyC_1D( F, traj, N, kw, kC, C )
   for alt=[-1 1]
     NewTraj = traj + alt;
     if alt < 0
-      NewTrajIndxs = find( NewTraj > -0.5-kw/2 );
+      NewTrajIndxs = find( NewTraj > -0.5-kw );
     else
-      NewTrajIndxs = find( NewTraj < 0.5+kw/2 );
+      NewTrajIndxs = find( NewTraj < 0.5+kw );
     end
 
     NewTraj = NewTraj( NewTrajIndxs );

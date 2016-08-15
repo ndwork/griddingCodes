@@ -43,8 +43,10 @@ function out = grid_2D( F, traj, N, weights, varargin )
   trueAlpha = max( nGrid ./ N );
 
   weightedF = F .* weights;
+
   padded = iGridT_2D( weightedF, traj, nGrid, ...
     'alpha', trueAlpha, 'W', W, 'nC', nC );
+
   out = cropData( padded, N );
 end
 

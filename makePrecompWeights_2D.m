@@ -51,8 +51,8 @@ function [weights,flag,res] = makePrecompWeights_2D( ...
   flag = 0;
   res = 0;
   switch alg
-    case '2cls'
-      [weights,flag,res] = makePrecompWeights_2D_2CLS( ...
+    case 'dcls'
+      [weights,flag,res] = makePrecompWeights_2D_DCLS( ...
         traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
 
     case 'cls'
@@ -67,6 +67,10 @@ function [weights,flag,res] = makePrecompWeights_2D( ...
       [weights,flag,res] = makePrecompWeights_2D_WLS( ...
         traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
 
+    case 'regCLS'
+      [weights,flag,res] = makePrecompWeights_2D_regCLS( ...
+        traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
+      
     case 'rls_cp'
       % Robust least squares
       [weights,flag,res] = makePrecompWeights_2D_RLSCP( ...
@@ -84,6 +88,133 @@ function [weights,flag,res] = makePrecompWeights_2D( ...
       error('makePrecompWeights: Algorithm not recognized');
   end
 
+end
+
+
+
+function [weights,lsFlag,lsRes] = makePrecompWeights_2D_DCLS( ...
+  traj, N, varargin )
+
+  defaultAlpha = 1.5;
+  defaultW = 8;
+  defaultNc = 500;
+  checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
+  p = inputParser;
+  p.addParamValue( 'alpha', defaultAlpha, checknum );
+  p.addParamValue( 'W', defaultW, checknum );
+  p.addParamValue( 'nC', defaultNc, checknum );
+  p.parse( varargin{:} );
+  alpha = p.Results.alpha;
+  W = p.Results.W;
+  nC = p.Results.nC;
+
+  iteration = 0;
+
+  % Make the Kaiser Bessel convolution kernel
+  trueAlpha = max( ceil( alpha * N ) ./ N );
+  Ny=N(1);  Nx=N(2);
+  Gy = Ny;
+  [kCy,Cy,~] = makeKbKernel( Gy, Ny, trueAlpha, W, nC );
+  Gx = Nx;
+  [kCx,Cx,~] = makeKbKernel( Gx, Nx, trueAlpha, W, nC );
+
+  nGrid = 2*N;
+  function out = applyA( in, type )
+    if nargin > 1 && strcmp( type, 'transp' )
+      in = reshape( in, nGrid );
+      out = applyCT_2D( in, traj, nGrid, kCy, kCx, Cy, Cx );
+    else
+      out = applyC_2D( in, traj, nGrid, kCy, kCx, Cy, Cx );
+      out = out(:);
+
+      disp(['makePrecompWeights_2D_DCLS working on iteration ', num2str(iteration) ]);
+      iteration = iteration + 1;
+      %residuals(iteration) = norm( out(:) - b(:), 2 ) / norm(b(:),2);
+      %if iteration>10, plot( residuals(1:iteration) ); drawnow; end
+    end
+  end
+
+tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
+
+  b=ones(nGrid);
+  tolerance = 1d-6;
+  maxIter = 1000;
+  [weights,lsFlag,lsRes] = lsqr( @applyA, b(:), tolerance, maxIter );
+
+  %scale = showPSF( weights, traj, N );
+  %weights = scale * weights;
+
+  %noise = randn(size(weights))*0.1;
+  %noisyWeights = weights .* ( 1 + noise );
+  %showPSF( noisyWeights, traj, N );
+end
+
+
+
+function [weights,lsFlag,lsRes] = makePrecompWeights_2D_regCLS( ...
+  traj, N, varargin )
+
+  defaultAlpha = 1.5;
+  defaultW = 8;
+  defaultNc = 500;
+  checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
+  p = inputParser;
+  p.addParamValue( 'alpha', defaultAlpha, checknum );
+  p.addParamValue( 'W', defaultW, checknum );
+  p.addParamValue( 'nC', defaultNc, checknum );
+  p.parse( varargin{:} );
+  alpha = p.Results.alpha;
+  W = p.Results.W;
+  nC = p.Results.nC;
+
+  iteration = 0;
+
+  % Make the Kaiser Bessel convolution kernel
+  nGrid = ceil( alpha * N );
+  trueAlpha = max( nGrid ./ N );
+  Ny=N(1);  Nx=N(2);
+  Gy = Ny;
+  [kCy,Cy,~] = makeKbKernel( Gy, Ny, trueAlpha, W, nC );
+  Gx = Nx;
+  [kCx,Cx,~] = makeKbKernel( Gx, Nx, trueAlpha, W, nC );
+
+  gamma = 1.0;
+  regFactor = sqrt( gamma / prod(nGrid) );
+regFactor = 0;
+
+  function out = applyA( in, type )
+    if nargin > 1 && strcmp( type, 'transp' )
+      in1 = in( 1 : prod(nGrid) );
+      in2 = in( prod(nGrid)+1 : end );
+      reshaped1 = reshape( in1, nGrid );
+      CTx = applyCT_2D( reshaped1, traj, nGrid, kCy, kCx, Cy, Cx );
+      out = CTx + regFactor*in2;
+    else
+      Cin = applyC_2D( in, traj, nGrid, kCy, kCx, Cy, Cx );
+      out = [ Cin(:); regFactor*in(:); ];
+
+      disp(['makePrecompWeights_2D_regCLS working on iteration ', num2str(iteration) ]);
+      iteration = iteration + 1;
+      %residuals(iteration) = norm( out(:) - b(:), 2 ) / norm(b(:),2);
+      %if iteration>10, plot( residuals(1:iteration) ); drawnow; end
+    end
+  end
+
+tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
+
+  nTraj = size(traj,1);
+  tmp = ones(nGrid);
+  b=[ tmp(:); zeros(nTraj,1); ];
+  tolerance = 1d-6;
+  maxIter = 1000;
+  [weights,lsFlag,lsRes] = lsqr( @applyA, b(:), tolerance, maxIter );
+
+  scale = showPSF( weights, traj, N );
+  weights = scale * weights;
+
+  %noise = randn(size(weights))*0.1;
+  %noisyWeights = weights .* ( 1 + noise );
+  %showPSF( noisyWeights, traj, N );
 end
 
 
@@ -111,11 +242,10 @@ function [weights,lsFlag,lsRes] = makePrecompWeights_2D_CLS( ...
   trueAlpha = max( nGrid ./ N );
   Ny=N(1);  Nx=N(2);
   Gy = Ny;
-  [kCy,Cy,~,kwy] = makeKbKernel( Gy, Ny, trueAlpha, W, nC );
+  [kCy,Cy,~] = makeKbKernel( Gy, Ny, trueAlpha, W, nC );
   Gx = Nx;
-  [kCx,Cx,~,kwx] = makeKbKernel( Gx, Nx, trueAlpha, W, nC );
+  [kCx,Cx,~] = makeKbKernel( Gx, Nx, trueAlpha, W, nC );
 
-  %nGrid = 2*N;
   function out = applyA( in, type )
     if nargin > 1 && strcmp( type, 'transp' )
       in = reshape( in, nGrid );
@@ -179,6 +309,8 @@ function [weights,flag,res] = makePrecompWeights_2D_FP( ...
   nTraj = size( traj, 1 );
   weights = ones( nTraj, 1 );
   maxIteration = 20;
+
+  
   tolerance = 1d-5;
   flag = 1;
   for iteration=1:maxIteration
@@ -195,8 +327,8 @@ function [weights,flag,res] = makePrecompWeights_2D_FP( ...
     end
   end
 
-  scale = showPSF( weights, traj, N );
-  weights = scale * weights;
+  %scale = showPSF( weights, traj, N );
+  %weights = scale * weights;
 end
 
 

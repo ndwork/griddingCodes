@@ -45,6 +45,5 @@ function out = gridT_2D( in, traj, N, weights, varargin )
   padded = padData(in, nGrid);
   tmp = iGrid_2D( padded, traj, 'alpha', trueAlpha, 'W', W, 'nC', nC );
   out = tmp .* weights;
-
 end
 

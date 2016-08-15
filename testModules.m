@@ -73,9 +73,9 @@ function testModules
 %   error = abs( innerProd1 - innerProd2 );
 %   disp([ 'grid/gridT 1D Adjointness error:  ', num2str(error) ]);  
 % 
-%
+% 
 %   %% Make sure iGrid_1D and iGridT_1D are adjoints
-%  nXPts = 100;
+%   nXPts = 100;
 %   nYPts = 50;
 %   kTraj = rand( nYPts, 1 ) - 0.5;
 %   %dk = 1/nYPts;
@@ -129,6 +129,20 @@ function testModules
 %   disp([ 'grid/gridT 1D Adjointness error:  ', num2str(error) ]);
 % 
 % 
+%   %% Make sure iGrid_2D and iGridT_2D are adjoints
+%   sizeX = [ 50, 50 ];
+%   nY = 20;
+%   kTraj = rand( nY, 2 ) - 0.5;
+%   x = rand( sizeX );
+%   y = rand( nY, 1 );
+%   Ax = iGrid_2D( x, kTraj );
+%   innerProd1 = dotP( Ax, y );
+%   ATy = iGridT_2D( y, kTraj, sizeX );
+%   innerProd2 = dotP( x, ATy );
+%   error = abs( innerProd1 - innerProd2 );
+%   disp([ 'iGrid/iGridT 2D Adjointness error:  ', num2str(error) ]);
+% 
+% 
 %   %% Make sure grid_2D and gridT_2D are adjoints
 %   nX = 100;
 %   sizeY = [ 50, 50 ];
@@ -146,7 +160,7 @@ function testModules
 
   %% Test iGrid_2D
   nPts = 64;
-  rectWidth = 31;
+  rectWidth = nPts/4 + 1;
   N = [nPts nPts];
   imgCoords = size2imgCoordinates( N );
   [x,y] = meshgrid( imgCoords{1}, imgCoords{2} );
@@ -161,6 +175,8 @@ function testModules
   %  'MarkerEdgeColor', 'k', 'MarkerSize', 5 ); set( gca, 'xTick', [] ); ...
   %  set( gca, 'yTick', [] );
 
+  ros = makeTrajROS( 'radial', 2*N );
+  
   trueFyVals = rectWidth .* sinc( rectWidth .* kTraj(:,1) );
   trueFxVals = rectWidth .* sinc( rectWidth .* kTraj(:,2) );
   trueFVals = trueFyVals .* trueFxVals;
@@ -171,9 +187,12 @@ function testModules
   disp(['iGrid_2D error: ', num2str(error)]);
 
   % Test roundtrip error with gridding
-  %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'cls' );
-  %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'fp' );
-  weights = makePrecompWeights_2D( kTraj, N, 'alg', 'ls' );
+  %weights_cls = makePrecompWeights_2D_v2( kTraj, N, ros, 'alg', 'cls' );
+  %weights_fp = makePrecompWeights_2D_v2( kTraj, N, 'alg', 'fp' );
+  %weights_regCLS = makePrecompWeights_2D_v2( kTraj, N, 'alg', 'regCLS' );
+  %weights_regWLS = makePrecompWeights_2D_v2( kTraj, N, 'alg', 'regWLS' );
+  weights_wls = makePrecompWeights_2D_v2( kTraj, N, 'alg', 'wls' );
+  %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'ls' );
   %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'rls' );
   %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'vor' );
 %load( 'weights_64x64_rand.mat' );

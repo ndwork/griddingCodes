@@ -37,16 +37,16 @@ function F = iGrid_1D( data, traj, varargin )
 
   % Make the Kaiser Bessel convolution kernel
   G = N;
-  [kC,C,c1D,kw] = makeKbKernel( G, N, alpha, W, nC );
+  [kC,C,c1D] = makeKbKernel( G, N, alpha, W, nC );
 
   % Pre-emphasize the image
-  preEmphasized = data ./ ( N * c1D );
+  preEmphasized = data ./ c1D;
 
   % Perform DFT
-  fftData = fftshift( fft( ifftshift(preEmphasized) ) );
+  fftData = fftshift( fft( ifftshift(preEmphasized) ) ) / N;
 
   % Perform a circular convolution
-  F = applyCT_1D( fftData, traj, N, kw, kC, C );
+  F = applyCT_1D( fftData, traj, N, kC, C );
 
 end
 

@@ -3,7 +3,7 @@ function out = grid_1D( F, traj, N, weights, varargin )
   % F = grid_1D( F, traj, N, weights, ...
   %   [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
-  % MRI reconstruction with Gridding
+  % Data reconstruction with Gridding
   %
   % Inputs:
   %   F is a 1D array representing the Fourier values

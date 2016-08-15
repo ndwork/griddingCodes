@@ -40,9 +40,9 @@ function out = applyCT_2D( fftData, traj, N, kCy, kCx, Cy, Cx )
     for altDir=[-1 1]
       NewTraj = traj + altDir*alt;
       if altDir < 0
-        NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim)/2 );
+        NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim) );
       else
-        NewTrajIndxs = find( NewTraj(:,dim) < 0.5+kws(dim)/2 );
+        NewTrajIndxs = find( NewTraj(:,dim) < 0.5+kws(dim) );
       end
 
       NewTraj = NewTraj( NewTrajIndxs, : );

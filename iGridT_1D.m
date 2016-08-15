@@ -24,13 +24,11 @@ function out = iGridT_1D( F, traj, N, varargin )
   defaultAlpha = 1.5;
   defaultW = 8;
   defaultNc = 500;
-  defaultVerbose = false;
   checknum = @(x) isnumeric(x) && isscalar(x) && (x >= 1);
   p = inputParser;
   p.addParamValue( 'alpha', defaultAlpha, checknum );
   p.addParamValue( 'W', defaultW, checknum );
   p.addParamValue( 'nC', defaultNc, checknum );
-  p.addParamValue( 'verbose', defaultVerbose );
   p.parse( varargin{:} );
   alpha = p.Results.alpha;
   W = p.Results.W;
@@ -38,10 +36,10 @@ function out = iGridT_1D( F, traj, N, varargin )
 
   % Make the Kaiser Bessel convolution kernel
   G = N;
-  [kC,C,c1D,kw] = makeKbKernel( G, N, alpha, W, nC );
+  [kC,C,c1D] = makeKbKernel( G, N, alpha, W, nC );
 
   % Perform a circular convolution
-  fftGridded = applyC_1D( F, traj, N, kw, kC, C );
+  fftGridded = applyC_1D( F, traj, N, kC, C );
 
   data = fftshift( ifft( ifftshift(fftGridded) ) );
 
