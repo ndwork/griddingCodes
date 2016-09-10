@@ -1,6 +1,6 @@
 
-function out = applyCT_2D( fftData, traj, N, kCy, kCx, Cy, Cx )
-  % out = applyCT_2D( fftData, traj, N, kCy, kCx, Cy, Cx )
+function out = applyCT_2D( fftData, traj, N, kCy, kCx, Cy, Cx, gridKs )
+  % out = applyCT_2D( fftData, traj, N, kCy, kCx, Cy, Cx [, gridKs ] )
   %
   % Inputs:
   % fftData - Mx1 array specifying Fourier value at traj(indx,:)
@@ -10,9 +10,14 @@ function out = applyCT_2D( fftData, traj, N, kCy, kCx, Cy, Cx )
   %
   % Written by Nicholas Dwork - Copyright 2016
 
-  gridKs = size2fftCoordinates( N );
-  gridKy=gridKs{1};  gridKx=gridKs{2};
-  [gridKx,gridKy] = meshgrid( gridKx, gridKy );
+  if nargin < 8
+    gridKs = size2fftCoordinates( N );
+    gridKy=gridKs{1};  gridKx=gridKs{2};
+    [gridKx,gridKy] = meshgrid(gridKx,gridKy);
+  else
+    gridKy = gridKs(:,1);
+    gridKx = gridKs(:,2);
+  end
 
   kws = [ max(kCy), max(kCx) ];
   kDistThreshY = kws(1);

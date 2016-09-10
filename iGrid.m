@@ -19,10 +19,10 @@ function k = iGrid( img, traj, varargin )
 
   nD = size( traj, 2 );
   if nD == 1
-    out = applyE_1D( img, traj, varargin{:} );
+    out = iGrid_1D( img, traj, varargin{:} );
   elseif nD == 2
-    k = applyE_2D( img, traj, varargin{:} );
+    k = iGrid_2D( img, traj, varargin{:} );
   elseif
-    k = applyE_3D( img, traj, varargin{:} );
+    k = iGrid_3D( img, traj, varargin{:} );
   end
 end

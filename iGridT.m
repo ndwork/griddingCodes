@@ -1,6 +1,6 @@
 
 function out = iGridT( k, traj, N, varargin )
-  % out = applyET( k, traj, N, [ 'alpha', alpha, 'w', w, 'nC', nC ] )
+  % out = iGridT( k, traj, N, [ 'alpha', alpha, 'w', w, 'nC', nC ] )
   %
   % Gridding (without density correction) is the adjoint of MRI encoding
   % (often called inverse gridding).  This function applies the transpose 

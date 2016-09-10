@@ -18,8 +18,8 @@ function F = iGrid_3D( data, traj, varargin )
   % Output:
   %   F the estimates of the Fourier coefficients along the trajectory
   %
-  % Written by Nicholas Dwork (c) 2015
-  % Based on Beatty et. al., IEEE TMI, 2005
+  % Written by Nicholas Dwork (c) 2016
+  % Based on EE369C notes by John Pauly Beatty et. al., IEEE TMI, 2005
 
   defaultAlpha = 1.5;
   defaultW = 8;
@@ -46,17 +46,17 @@ function F = iGrid_3D( data, traj, varargin )
   kws = [ kwy, kwx, kwz ];
 
   % Pre-emphasize the image
-  cImgYX = (Ny*cImgY) * transpose(Nx*cImgX);
-  cImgZ_reshaped = Nz * reshape( cImgZ, [1 1 numel(cImgZ)] );
+  cImgYX = cImgY * transpose(cImgX);
+  cImgZ_reshaped = reshape( cImgZ, [1 1 numel(cImgZ)] );
   cImg = bsxfun( @times, cImgZ_reshaped, cImgYX );
   preEmphasized = data ./ cImg;
 
   % Perform an fft
-  fftData = fftshift( fftn( ifftshift(preEmphasized) ) );
+  fftData = fftshift( fftn( ifftshift(preEmphasized) ) ) / (Ny*Nx*Nz);
 
   % Perform a circular convolution
   N = [Ny Nx Nz];
-  F = applyCT_3D( fftData, traj, N, kws, kCy, kCx, kCz, Cy, Cx, Cz );
+  F = applyCT_3D( fftData, traj, N, kCy, kCx, kCz, Cy, Cx, Cz );
 
 end
 

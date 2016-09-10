@@ -21,7 +21,7 @@ function out = iGridT_3D( F, traj, N, varargin )
   %   nC - specifies the number of samples in the kernel
   %   verbose - if set to true, outputs processing status
   %
-  % Written by Nicholas Dwork (c) 2015
+  % Written by Nicholas Dwork (c) 2016
   % Based on EE369C notes written by John Pauly
 
   if numel(N)==1
@@ -35,9 +35,9 @@ function out = iGridT_3D( F, traj, N, varargin )
   defaultNc = 500;
   checknum = @(x) isnumeric(x) && isscalar(x) && (x >= 1);
   p = inputParser;
-  p.addParamValue( 'alpha', defaultAlpha, checknum );
-  p.addParamValue( 'W', defaultW, checknum );
-  p.addParamValue( 'nC', defaultNc, checknum );
+  p.addParameter( 'alpha', defaultAlpha, checknum );
+  p.addParameter( 'W', defaultW, checknum );
+  p.addParameter( 'nC', defaultNc, checknum );
   p.parse( varargin{:} );
   alpha = p.Results.alpha;
   W = p.Results.W;
@@ -45,16 +45,14 @@ function out = iGridT_3D( F, traj, N, varargin )
 
   % Make the convolution kernel
   Gy = Ny;
-  [kCy,Cy,cImgY,kwy] = makeKbKernel( Gy, Ny, alpha, W, nC );
+  [kCy,Cy,cImgY] = makeKbKernel( Gy, Ny, alpha, W, nC );
   Gx = Nx;
-  [kCx,Cx,cImgX,kwx] = makeKbKernel( Gx, Nx, alpha, W, nC );
+  [kCx,Cx,cImgX] = makeKbKernel( Gx, Nx, alpha, W, nC );
   Gz = Nz;
-  [kCz,Cz,cImgZ,kwz] = makeKbKernel( Gz, Nz, alpha, W, nC );
-  kws = [ kwy kwx kwz ];
+  [kCz,Cz,cImgZ] = makeKbKernel( Gz, Nz, alpha, W, nC );
 
   % Perform Adjoint of Circular Convolution
-  fftGridded = applyC_3D( F, traj, [Ny Nx Nz], kws, ...
-    kCy, kCx, kCz, Cy, Cx, Cz );
+  fftGridded = applyC_3D( F, traj, [Ny Nx Nz], kCy, kCx, kCz, Cy, Cx, Cz );
 
   % Perform an inverse fft
   data = fftshift( ifftn( ifftshift(fftGridded) ) );

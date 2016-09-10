@@ -18,7 +18,7 @@ function F = iGrid_2D( data, traj, varargin )
   % Output:
   %   F the estimates of the Fourier coefficients along the trajectory
   %
-  % Written by Nicholas Dwork (c) 2015
+  % Written by Nicholas Dwork (c) 2016
   % Based on EE369C notes by John Pauly and Beatty et. al., IEEE TMI, 2005
 
   defaultAlpha = 1.5;
@@ -47,7 +47,7 @@ function F = iGrid_2D( data, traj, varargin )
   preEmphasized = data ./ denom;
 
   % Perform an fft
-  fftData = fftshift( fft2( ifftshift(preEmphasized) ) ) / (Nx*Ny);
+  fftData = fftshift( fft2( ifftshift(preEmphasized) ) ) / (Ny*Nx);
 
   % Perform a circular convolution
   N = [Ny Nx];

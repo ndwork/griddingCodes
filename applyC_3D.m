@@ -1,39 +1,51 @@
 
-function out = applyC_3D( F, traj, N, kws, kCy, kCx, kCz, Cy, Cx, Cz )
-  % out = applyC_2D( F, traj, N, kws, kCy, kCx, kCz, Cy, Cx, Cz )
+function out = applyC_3D( F, traj, N, kCy, kCx, kCz, Cy, Cx, Cz, gridKs )
+  % out = applyC_3D( F, traj, N, kCy, kCx, kCz, Cy, Cx, Cz, gridKs )
   %
   % Written by Nicholas Dwork - Copyright 2016
 
-  Ny = N(1);  kwy=kws(1);
-  Nx = N(2);  kwx=kws(2);
-  Nz = N(3);  kwz=kws(3);
+  if nargin < 10
+    gridKs = size2fftCoordinates( N );
+    gridKy=gridKs{1};  gridKx=gridKs{2};  gridKz=gridKs{3};
+    [gridKx,gridKy,gridKz] = meshgrid(gridKx,gridKy,gridKz);
+  else
+    gridKy = gridKs(:,1);
+    gridKx = gridKs(:,2);
+    gridKz = gridKs(:,3);
+  end
 
-  gridKs = size2fftCoordinates([ Ny Nx Nz ]);
-  gridKy=gridKs{1};  gridKx=gridKs{2};  gridKz=gridKs{3};
-
-  nTraj = size(traj,1);
-  kDistThreshY = 0.5*kwy;
-  kDistThreshX = 0.5*kwx;
-  kDistThreshZ = 0.5*kwz;
-  out = zeros( [Ny Nx Nz] );
-  for trajIndx = 1:nTraj
+  nTraj = size( traj, 1 );
+  kws = [ max(kCy), max(kCx), max(kCz) ];
+  kDistThreshY = kws(1);
+  kDistThreshX = kws(2);
+  kDistThreshZ = kws(3);
+  tmp = cell(nTraj,1);
+  parfor trajIndx=1:nTraj
+    disp(['applyC_3D: Working on traj ', num2str(trajIndx), ...
+      ' of ', num2str(nTraj)]);
     distsKy = abs( traj(trajIndx,1) - gridKy );
     distsKx = abs( traj(trajIndx,2) - gridKx );
     distsKz = abs( traj(trajIndx,3) - gridKz );
-    shortDistIndxsY = find( distsKy < kDistThreshY );
-    shortDistIndxsX = find( distsKx < kDistThreshX );
-    shortDistIndxsZ = find( distsKz < kDistThreshZ );
-    shortDistsKy = distsKy( shortDistIndxsY );
-    shortDistsKx = distsKx( shortDistIndxsX );
-    shortDistsKz = distsKz( shortDistIndxsZ );
+    shortDistIndxs = find( distsKy < kDistThreshY & ...
+                           distsKz < kDistThreshX & ...
+                           distsKx < kDistThreshZ );
+    shortDistsKy = distsKy( shortDistIndxs );
+    shortDistsKx = distsKx( shortDistIndxs );
+    shortDistsKz = distsKz( shortDistIndxs );
     CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
     CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
     CValsZ = interp1( kCz, Cz, shortDistsKz, 'linear', 0 );
-    CVals = bsxfun( @times, CValsY*transpose(CValsX), ...
-      reshape( CValsZ, [1 1 numel(CValsZ)] ) );
-    out(shortDistIndxsY,shortDistIndxsX,shortDistIndxsZ ) = ...
-      out(shortDistIndxsY,shortDistIndxsX,shortDistIndxsZ ) + ...
-      F(trajIndx) * CVals;
+
+    tmp{trajIndx} = struct( ...
+      'indxs', shortDistIndxs, ...
+      'values', F(trajIndx) * ( CValsY .* CValsX .* CValsZ ) ...
+    );
+  end
+
+  out = zeros( size(gridKy) );
+  for trajIndx=1:nTraj
+    out( tmp{trajIndx}.indxs ) = out( tmp{trajIndx}.indxs ) + ...
+      tmp{trajIndx}.values;
   end
 
   onesCol = ones(nTraj,1);
@@ -44,9 +56,9 @@ function out = applyC_3D( F, traj, N, kws, kCy, kCx, kCz, Cy, Cx, Cz )
     for altDir=[-1 1]
       NewTraj = traj + altDir*alt;
       if altDir < 0
-        NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim)/2 );
+        NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim) );
       else
-        NewTrajIndxs = find( NewTraj(:,dim) < 0.5+kws(dim)/2 );
+        NewTrajIndxs = find( NewTraj(:,dim) < 0.5+kws(dim) );
       end
 
       NewTraj = NewTraj( NewTrajIndxs, : );
@@ -55,20 +67,17 @@ function out = applyC_3D( F, traj, N, kws, kCy, kCx, kCz, Cy, Cx, Cz )
         NewDistsKy = abs( NewTraj(i,1) - gridKy );
         NewDistsKx = abs( NewTraj(i,2) - gridKx );
         NewDistsKz = abs( NewTraj(i,3) - gridKz );
-        NewShortDistIndxsY = find( NewDistsKy < kDistThreshY );
-        NewShortDistIndxsX = find( NewDistsKx < kDistThreshX );
-        NewShortDistIndxsZ = find( NewDistsKz < kDistThreshZ );
-        NewShortDistsKy = NewDistsKy( NewShortDistIndxsY );
-        NewShortDistsKx = NewDistsKx( NewShortDistIndxsX );
-        NewShortDistsKz = NewDistsKz( NewShortDistIndxsZ );
+        NewShortDistIndxs = find( NewDistsKy < kDistThreshY & ...
+                                  NewDistsKx < kDistThreshX & ...
+                                  NewDistsKz < kDistThreshZ );
+        NewShortDistsKy = NewDistsKy( NewShortDistIndxs );
+        NewShortDistsKx = NewDistsKx( NewShortDistIndxs );
+        NewShortDistsKz = NewDistsKz( NewShortDistIndxs );
         NewCValsY = interp1( kCy, Cy, NewShortDistsKy, 'linear', 0 );
         NewCValsX = interp1( kCx, Cx, NewShortDistsKx, 'linear', 0 );
         NewCValsZ = interp1( kCz, Cz, NewShortDistsKz, 'linear', 0 );
-        NewCVals = bsxfun( @times, NewCValsY*transpose(NewCValsX), ...
-          reshape( NewCValsZ, [1 1 numel(NewCValsZ)] ) );
-        out( NewShortDistIndxsY, NewShortDistIndxsX, NewShortDistIndxsZ ) = ...
-          out( NewShortDistIndxsY, NewShortDistIndxsX, NewShortDistIndxsZ ) + ...
-          F(trajIndx) * NewCVals;
+        out(NewShortDistIndxs) = out(NewShortDistIndxs) + ...
+          F(trajIndx) * ( NewCValsY .* NewCValsX .* NewCValsZ );
       end
     end
   end

@@ -19,10 +19,6 @@ function out = applyC_2D( F, traj, N, kCy, kCx, Cy, Cx, gridKs )
   kDistThreshX = kws(2);
   tmp = cell(nTraj,1);
   parfor trajIndx=1:nTraj
-    %if mod( trajIndx, 100 )==0
-    %  disp(['applyC_2D: working on iteration ', num2str(trajIndx), ...
-    %    ' of ', num2str(nTraj) ]);
-    %end
     distsKy = abs( traj(trajIndx,1) - gridKy );
     distsKx = abs( traj(trajIndx,2) - gridKx );
     shortDistIndxs = find( distsKy < kDistThreshY & ...

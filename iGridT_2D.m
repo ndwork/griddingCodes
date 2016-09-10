@@ -21,7 +21,7 @@ function out = iGridT_2D( F, traj, N, varargin )
   %   nC - specifies the number of samples in the kernel
   %   verbose - if set to true, outputs processing status
   %
-  % Written by Nicholas Dwork (c) 2015
+  % Written by Nicholas Dwork (c) 2016
   % Based on EE369C notes written by John Pauly
 
   if numel(N)==1
@@ -35,9 +35,9 @@ function out = iGridT_2D( F, traj, N, varargin )
   defaultNc = 500;
   checknum = @(x) isnumeric(x) && isscalar(x) && (x >= 1);
   p = inputParser;
-  p.addParamValue( 'alpha', defaultAlpha, checknum );
-  p.addParamValue( 'W', defaultW, checknum );
-  p.addParamValue( 'nC', defaultNc, checknum );
+  p.addParameter( 'alpha', defaultAlpha, checknum );
+  p.addParameter( 'W', defaultW, checknum );
+  p.addParameter( 'nC', defaultNc, checknum );
   p.parse( varargin{:} );
   alpha = p.Results.alpha;
   W = p.Results.W;

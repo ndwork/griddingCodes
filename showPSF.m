@@ -7,8 +7,8 @@ function [scale,mse] = showPSF( weights, traj, N, varargin )
 
   p = inputParser;
   p.addOptional( 'mask', [] );
-  p.addParamValue( 'savefile', [] );
-  p.addParamValue( 'imgTitle', [] );
+  p.addParameter( 'savefile', [] );
+  p.addParameter( 'imgTitle', [] );
   p.parse( varargin{:} );
   mask = p.Results.mask;
   savefile = p.Results.savefile;
@@ -22,12 +22,10 @@ function [scale,mse] = showPSF( weights, traj, N, varargin )
   psf = cropData( psf, 2*N );
 
   if isempty(mask)
-    %radialImg = makeRadialImg( size(psf) );
-    %mask = radialImg <= min(N);
     mask = ones( size(psf) );
   end
-  
-  mask = cropData( mask, 2*N );
+
+  mask = cropData( mask, nGrid );
   psf = mask .* psf;
   absPsf=abs(psf);
   absPsf_dB = 20*log10(absPsf);

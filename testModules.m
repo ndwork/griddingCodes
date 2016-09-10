@@ -167,16 +167,14 @@ function testModules
   rect2D = double( abs(x) <= rectWidth/2 & abs(y) <= rectWidth/2 )';
   N = size( rect2D );
 
-  %kTraj = makeTrajPts( 2, 'random', nPts*nPts );
-  kTraj = makeTrajPts( 2, 'radial', 360, 50 );
+  kTraj = makeTrajPts( 2, 'random', 4*nPts*nPts );
+  %kTraj = makeTrajPts( 2, 'radial', 360, 50 );
   %kTraj = makeTrajPts( 2, 'spinWarp', 1/nPts );
-  %kTraj = makeTrajPts( 2, 'poissonDisc', 1/nPts );
+  %kTraj = makeTrajPts( 2, 'poissonDisc', 1/(2*nPts) );
   %plot( kTraj(:,1), kTraj(:,2), 'o', 'MarkerFaceColor', 'k', ...
   %  'MarkerEdgeColor', 'k', 'MarkerSize', 5 ); set( gca, 'xTick', [] ); ...
   %  set( gca, 'yTick', [] );
 
-  ros = makeTrajROS( 'radial', 2*N );
-  
   trueFyVals = rectWidth .* sinc( rectWidth .* kTraj(:,1) );
   trueFxVals = rectWidth .* sinc( rectWidth .* kTraj(:,2) );
   trueFVals = trueFyVals .* trueFxVals;
@@ -187,13 +185,11 @@ function testModules
   disp(['iGrid_2D error: ', num2str(error)]);
 
   % Test roundtrip error with gridding
-  %weights_cls = makePrecompWeights_2D_v2( kTraj, N, ros, 'alg', 'cls' );
-  %weights_fp = makePrecompWeights_2D_v2( kTraj, N, 'alg', 'fp' );
-  %weights_regCLS = makePrecompWeights_2D_v2( kTraj, N, 'alg', 'regCLS' );
-  %weights_regWLS = makePrecompWeights_2D_v2( kTraj, N, 'alg', 'regWLS' );
-  weights_wls = makePrecompWeights_2D_v2( kTraj, N, 'alg', 'wls' );
-  %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'ls' );
-  %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'rls' );
+  %weights_cls = makePrecompWeights_2D( kTraj, N, 'alg', 'cls' );
+  %weights_fp = makePrecompWeights_2D( kTraj, N, 'alg', 'fp' );
+  %weights_fdLSDC = makePrecompWeights_2D( kTraj, N, 'alg', 'fdLSDC' );
+  %weights_sdLSDC = makePrecompWeights_2D( kTraj, N, 'alg', 'sdLSDC' );
+  weights_con_sdLSDC = makePrecompWeights_2D( kTraj, N, 'alg', 'con_sdLSDC' );
   %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'vor' );
 %load( 'weights_64x64_rand.mat' );
   tic;
