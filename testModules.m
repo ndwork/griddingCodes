@@ -89,7 +89,22 @@ function testModules
 %   error = abs( innerProd1 - innerProd2 );
 %   disp([ 'iGrid/iGridT 1D Adjointness error:  ', num2str(error) ]);
 % 
-% 
+%   %% Make sure grid_1D and gridT_1D are adjoints
+%   nXPts = 50;
+%   nYPts = 100;
+%   kTraj = rand( nXPts, 1 ) - 0.5;
+%   weights = rand( nXPts, 1 );
+%   %dk = 1/nYPts;
+%   %kTraj = -0.5 : dk : 0.5-dk;
+%   x = rand( nXPts, 1 );
+%   y = rand( nYPts, 1 );
+%   Ax = grid_1D( x, kTraj, nYPts, weights );
+%   ATy = gridT_1D( y, kTraj, nYPts, weights );
+%   innerProd1 = dotP( Ax, y );
+%   innerProd2 = dotP( x, ATy );
+%   error = abs( innerProd1 - innerProd2 );
+%   disp([ 'grid/gridT 1D Adjointness error:  ', num2str(error) ]);
+%
 %   %% Test 2D DFT
 %   nPts = 100;
 %   rectWidth = 31;
@@ -109,24 +124,23 @@ function testModules
 %   DFTValues = fftshift( fft2( ifftshift(rect2D) ) );
 %   error = norm( trueFVals(:) - DFTValues(:), 2 ) / ...
 %           norm( trueFVals(:), 2 );
-%   disp([ '2D iDFT error: ', num2str(error) ]);
+%  disp([ '2D iDFT error: ', num2str(error) ]);
 % 
-% 
-%   %% Make sure grid_1D and gridT_1D are adjoints
-%   nXPts = 50;
-%   nYPts = 100;
-%   kTraj = rand( nXPts, 1 ) - 0.5;
-%   weights = rand( nXPts, 1 );
-%   %dk = 1/nYPts;
-%   %kTraj = -0.5 : dk : 0.5-dk;
-%   x = rand( nXPts, 1 );
-%   y = rand( nYPts, 1 );
-%   Ax = grid_1D( x, kTraj, nYPts, weights );
-%   ATy = gridT_1D( y, kTraj, nYPts, weights );
-%   innerProd1 = dotP( Ax, y );
-%   innerProd2 = dotP( x, ATy );
+%   %% Make sure applyC_2D and applyCT_2D are adjoints
+%   N = [ 50, 50 ];
+%   nY = 20;
+%   kTraj = rand( nY, 2 ) - 0.5;
+%   x = rand( N );
+%   y = rand( nY, 1 );
+%   [kCy,Cy] = makeKbKernel( N(2), N(2) );
+%   [kCx,Cx] = makeKbKernel( N(2), N(2) );
+%   Ay = applyC_2D( y, kTraj, N, kCy, kCx, Cy, Cx );
+%   ATx = applyCT_2D( x, kTraj, N, kCy, kCx, Cy, Cx );
+%   %ATx = applyCT_2D_v3( x, kTraj, N, kCy, kCx, Cy, Cx );
+%   innerProd1 = dotP( Ay, x );
+%   innerProd2 = dotP( y, ATx );
 %   error = abs( innerProd1 - innerProd2 );
-%   disp([ 'grid/gridT 1D Adjointness error:  ', num2str(error) ]);
+%   disp([ 'applyC/applyCT 2D Adjointness error:  ', num2str(error) ]);
 % 
 % 
 %   %% Make sure iGrid_2D and iGridT_2D are adjoints
@@ -179,7 +193,10 @@ function testModules
   trueFxVals = rectWidth .* sinc( rectWidth .* kTraj(:,2) );
   trueFVals = trueFyVals .* trueFxVals;
   tic;
+profile on
   iGridFVals = iGrid_2D( rect2D, kTraj );
+profile off
+profile viewer
   iGrid_2D_time = toc;  %#ok<NASGU>
   error = norm( trueFVals - iGridFVals, 2 ) / norm( trueFVals, 2 );
   disp(['iGrid_2D error: ', num2str(error)]);
@@ -189,10 +206,10 @@ function testModules
   %weights_fp = makePrecompWeights_2D( kTraj, N, 'alg', 'fp' );
   %weights_fdLSDC = makePrecompWeights_2D( kTraj, N, 'alg', 'fdLSDC' );
   %weights_sdLSDC = makePrecompWeights_2D( kTraj, N, 'alg', 'sdLSDC' );
-  weights_con_sdLSDC = makePrecompWeights_2D( kTraj, N, 'alg', 'con_sdLSDC' );
+  %weights_con_sdLSDC = makePrecompWeights_2D( kTraj, N, 'alg', 'rLSDC' );
   %weights = makePrecompWeights_2D( kTraj, N, 'alg', 'vor' );
+  weights = ones( size(kTraj,1), 1 );
 %load( 'weights_64x64_rand.mat' );
-  tic;
   gridded_2D = grid_2D( iGridFVals, kTraj, N, weights );
   grid_2D_time = toc;  %#ok<NASGU>
   err = norm( gridded_2D(:) - rect2D(:), 2 ) / ...

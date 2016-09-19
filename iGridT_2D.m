@@ -45,9 +45,9 @@ function out = iGridT_2D( F, traj, N, varargin )
 
   % Make the Kaiser Bessel convolution kernel
   Gy = Ny;
-  [kCy,Cy,cImgY] = makeKbKernel( Gy, Ny, alpha, W, nC );
+  [kCy,Cy,cImgY] = makeKbKernel( Gy, Ny, 'alpha', alpha, 'W', W, 'nC', nC );
   Gx = Nx;
-  [kCx,Cx,cImgX] = makeKbKernel( Gx, Nx, alpha, W, nC );
+  [kCx,Cx,cImgX] = makeKbKernel( Gx, Nx, 'alpha', alpha, 'W', W, 'nC', nC );
 
   % Perform a circular convolution
   fftGridded = applyC_2D( F, traj, [Ny Nx], kCy, kCx, Cy, Cx );
