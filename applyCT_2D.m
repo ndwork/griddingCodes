@@ -1,6 +1,6 @@
 
-function out = applyCT_2D( F, kTraj, N, kCy, kCx, Cy, Cx, gridKs )
-  % out = applyCT_2D( F, kTraj, N, kCy, kCx, Cy, Cx [, gridKs ] )
+function out = applyCT_2D( fftData, traj, N, kCy, kCx, Cy, Cx, gridKs )
+  % out = applyCT_2D( fftData, traj, N, kCy, kCx, Cy, Cx [, gridKs ] )
   %
   % Inputs:
   % fftData - Mx1 array specifying Fourier value at traj(indx,:)
@@ -13,47 +13,37 @@ function out = applyCT_2D( F, kTraj, N, kCy, kCx, Cy, Cx, gridKs )
   if nargin < 8
     gridKs = size2fftCoordinates( N );
     gridKy=gridKs{1};  gridKx=gridKs{2};
+    [gridKx,gridKy] = meshgrid(gridKx,gridKy);
   else
     gridKy = gridKs(:,1);
     gridKx = gridKs(:,2);
   end
 
-  kDistThreshY = max(kCy);
-  kDistThreshX = max(kCx);
+  kws = [ max(kCy), max(kCx) ];
+  kDistThreshY = kws(1);
+  kDistThreshX = kws(2);
 
-  nTraj = size( kTraj, 1 );
+  nTraj = size( traj, 1 );
   out = zeros( nTraj, 1 );
-  indxs = 1:size(kTraj,1);
-  for j=1:numel(gridKy)
-    distsKy = abs( gridKy(j) - kTraj(:,1) );
-    shortDistsKy = distsKy( distsKy < kDistThreshY );
-    if numel(shortDistsKy)==0, continue; end;
-
+  parfor trajIndx = 1:nTraj
+    kDistsY = abs( traj(trajIndx,1) - gridKy );
+    kDistsX = abs( traj(trajIndx,2) - gridKx );
+    shortDistIndxs = find( kDistsY < kDistThreshY & kDistsX < kDistThreshX );
+    shortDistsKy = kDistsY( shortDistIndxs );
+    shortDistsKx = kDistsX( shortDistIndxs );
     CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
-    subTraj = kTraj( distsKy < kDistThreshY, : );
-    subIndxsY = indxs( distsKy < kDistThreshY );
-
-    for i=1:numel(gridKx)
-      distsKx = abs( gridKx(i) - subTraj(:,2) );
-      shortDistsKx = distsKx( distsKx < kDistThreshX );
-      if numel(shortDistsKx)==0, continue; end;
-
-      subCValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
-      subCValsY = CValsY( distsKx < kDistThreshX );
-      subIndxsYX = subIndxsY( distsKx < kDistThreshX );
-
-      out(subIndxsYX) = out(subIndxsYX) + F(j,i) * subCValsX .* subCValsY;
-    end
+    CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
+    kVals = fftData( shortDistIndxs );
+    out( trajIndx ) = sum( kVals .* CValsY .* CValsX );
   end
 
-  kws = [ kDistThreshY, kDistThreshX ];
   onesCol = ones(nTraj,1);
   for dim=1:2
-    alt = zeros( size(kTraj) );
+    alt = zeros( size(traj) );
     alt(:,dim) = onesCol;
 
     for altDir=[-1 1]
-      NewTraj = kTraj + altDir*alt;
+      NewTraj = traj + altDir*alt;
       if altDir < 0
         NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim) );
       else
@@ -61,28 +51,19 @@ function out = applyCT_2D( F, kTraj, N, kCy, kCx, Cy, Cx, gridKs )
       end
 
       NewTraj = NewTraj( NewTrajIndxs, : );
-      for j=1:numel(gridKy)
-        distsKy = abs( gridKy(j) - NewTraj(:,1) );
-        shortDistsKy = distsKy( distsKy < kDistThreshY );
-        if numel(shortDistsKy)==0, continue; end;
-
-        CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
-        subTraj = NewTraj( distsKy < kDistThreshY, : );
-        subIndxsY = NewTrajIndxs( distsKy < kDistThreshY );
-
-        for i=1:numel(gridKx)
-          distsKx = abs( gridKx(i) - subTraj(:,2) );
-          shortDistsKx = distsKx( distsKx < kDistThreshX );
-          if numel(shortDistsKx)==0, continue; end;
-
-          subCValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
-          subCValsY = CValsY( distsKx < kDistThreshX );
-          subIndxsYX = subIndxsY( distsKx < kDistThreshX );
-
-          out(subIndxsYX) = out(subIndxsYX) + F(j,i) * subCValsX .* subCValsY;
-        end
+      for i=1:numel(NewTrajIndxs)
+        trajIndx = NewTrajIndxs(i);
+        NewDistsKy = abs( NewTraj(i,1) - gridKy );
+        NewDistsKx = abs( NewTraj(i,2) - gridKx );
+        NewShortDistIndxs = find( NewDistsKy < kDistThreshY & ...
+                                  NewDistsKx < kDistThreshX );
+        NewShortDistsKy = NewDistsKy( NewShortDistIndxs );
+        NewShortDistsKx = NewDistsKx( NewShortDistIndxs );
+        NewCValsY = interp1( kCy, Cy, NewShortDistsKy, 'linear', 0 );
+        NewCValsX = interp1( kCx, Cx, NewShortDistsKx, 'linear', 0 );
+        NewKVals = fftData( NewShortDistIndxs );
+        out(trajIndx) = out(trajIndx) + sum( NewKVals .* NewCValsY .* NewCValsX );
       end
-
     end
   end
 
