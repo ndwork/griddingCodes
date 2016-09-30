@@ -5,7 +5,7 @@ function makePaperImgs
   datacases = [2,1];
   ds = 4;
   outDir = './paperImgs';
-  algorithms = {'fp','fdLSDC','fdLSDC_con','cls'};
+  algorithms = {'fp','fdLSDC','fdLSDC_con'};
 
 
   mkdir( outDir );
@@ -20,7 +20,7 @@ function makePaperImgs
 
     [kTraj,iGridFVals,N] = loadDataCase( datacase, ds );
     nCoils = size( iGridFVals, 2 );
-    
+
     for algIndx=1:numel(algorithms)
       thisAlg = algorithms{algIndx};
 
