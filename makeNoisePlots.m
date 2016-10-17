@@ -1,40 +1,57 @@
 
 function makeNoisePlots
+  close all; clear;
 
-  ins = [ 0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 ];
-  
-  lsMSEs = [ ...
-    0.00018818, ...
-    0.0002066, ...
-    0.00022032, ...
-    0.00026371, ...
-    0.00039759, ...
-    0.00045195, ...
-    0.00065227, ...
-    0.00070182, ...
-    0.00083754, ...
-    0.0010098, ...
-    0.0014204 ];
+  datacases = [1,2];
+  outDir = './paperImgs';
+  algorithms = {'LSDC','rLSDC'};
+  Ns = { [ 256 256 ], [ 128 64 ] };
 
-  rlsMSEs = [ ...
-    0.00019387, ...
-    0.00019698, ...
-    0.00020593, ...
-    0.00021952, ...
-    0.0002412, ...
-    0.00027096, ...
-    0.00029977, ...
-    0.00034614, ...
-    0.00038587, ...
-    0.00044047, ...
-    0.00048513 ];
+  noiseStdDevs = 0:0.1:1;
 
-  figure;
-  plot( ins, lsMSEs, 'k', 'LineWidth', 3 );
-  hold on;
-  plot( ins, rlsMSEs, 'b--', 'LineWidth', 3 );
-  legendH = legend( 'PSFLS', 'RPSFLS' );
-  legendObj = findobj(legendH,'type','text');
-  set(legendObj,'FontSize',18)
-  set( gca, 'xTick', [], 'yTick', [] );
+  lineStyles = {'-','--',':'};
+  mses = zeros(numel(algorithms),numel(noiseStdDevs));
+  for datacaseIndx=1:numel(datacases)
+    datacase = datacases(datacaseIndx);
+    datacaseDir = [outDir, '/datacase_', num2str(datacase,'%4.4i')];
+
+    N = Ns{datacaseIndx};
+
+    ellipticalImg = makeEllipticalImage( 2*N );
+    mask = double( ellipticalImg <= 0 );
+
+    for noiseIndx = 1:numel(noiseStdDevs)
+
+      for algIndx=1:numel(algorithms)
+        thisAlg = algorithms{algIndx};
+
+        load( [datacaseDir,'/weights_',thisAlg,'.mat'] );
+        nTraj = size(kTraj,1);
+
+        noise = noiseStdDevs(noiseIndx) * randn( nTraj, 1 );
+        noisyWeights = weights .* ( 1 + noise );
+        [~,mse] = showPSF( noisyWeights, kTraj, N, mask ); close;
+        mses( algIndx, noiseIndx ) = mse;
+        drawnow;
+      end
+    end
+
+    figure; hold all;
+    for algIndx=1:numel(algorithms)
+      thisLineStyle = lineStyles{mod(algIndx-1,numel(lineStyles))+1};
+      plot( noiseStdDevs, mses(algIndx,:), 'LineWidth', 3, ...
+        'LineStyle', thisLineStyle);
+    end
+    legendH = legend( algorithms{:} );
+    set( legendH, 'FontSize', 20, 'Position', [0.2 0.75 0.2 0.1] );
+    ax = gca;
+    ax.FontSize = 20;
+    ax.XTick = [min(noiseStdDevs) max(noiseStdDevs)];
+    ax.YTick = [min(mses(:)) max(mses(:))];
+    ax.YAxis.TickLabelFormat = '%,.1f';
+    ax.LineWidth = 1.5;
+    drawnow;
+
+  end
+
 end

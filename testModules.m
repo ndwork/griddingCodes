@@ -185,9 +185,10 @@ function testModules
   %kTraj = makeTrajPts( 2, 'radial', 360, 50 );
   %kTraj = makeTrajPts( 2, 'spinWarp', 1/nPts );
   %kTraj = makeTrajPts( 2, 'poissonDisc', 1/(2*nPts) );
+  %kTraj = makeTrajPts( 2, 'propeller', 100, 10, 0.02, 5 );  
   %plot( kTraj(:,1), kTraj(:,2), 'o', 'MarkerFaceColor', 'k', ...
-  %  'MarkerEdgeColor', 'k', 'MarkerSize', 5 ); set( gca, 'xTick', [] ); ...
-  %  set( gca, 'yTick', [] );
+  % 'MarkerEdgeColor', 'k', 'MarkerSize', 3 ); set( gca, 'xTick', [] ); ...
+  % set( gca, 'yTick', [] );
 
   trueFyVals = rectWidth .* sinc( rectWidth .* kTraj(:,1) );
   trueFxVals = rectWidth .* sinc( rectWidth .* kTraj(:,2) );

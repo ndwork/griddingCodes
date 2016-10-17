@@ -1,6 +1,6 @@
 
-function out = grid_2D( F, traj, N, weights, varargin )
-  % F = grid_2D( F, traj, N, weights, ...
+function recon = grid_2D( F, traj, N, weights, varargin )
+  % recon = grid_2D( F, traj, N, weights, ...
   %   [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % Image reconstruction with Gridding
@@ -21,7 +21,7 @@ function out = grid_2D( F, traj, N, weights, varargin )
   %   nC is the number of points to sample the convolution kernel
   %
   % Output:
-  %   out is the uniformly spaced data in the space domain
+  %   recon is the uniformly spaced data in the space domain
   %
   % Written by Nicholas Dwork (c) 2015
   % Based on EE369C notes by John Pauly and Beatty et. al., IEEE TMI, 2005
@@ -31,9 +31,9 @@ function out = grid_2D( F, traj, N, weights, varargin )
   defaultNc = 500;
   checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
   p = inputParser;
-  p.addParamValue( 'alpha', defaultAlpha, checknum );
-  p.addParamValue( 'W', defaultW, checknum );
-  p.addParamValue( 'nC', defaultNc, checknum );
+  p.addParameter( 'alpha', defaultAlpha, checknum );
+  p.addParameter( 'W', defaultW, checknum );
+  p.addParameter( 'nC', defaultNc, checknum );
   p.parse( varargin{:} );
   alpha = p.Results.alpha;
   W = p.Results.W;
@@ -47,6 +47,6 @@ function out = grid_2D( F, traj, N, weights, varargin )
   padded = iGridT_2D( weightedF, traj, nGrid, ...
     'alpha', trueAlpha, 'W', W, 'nC', nC );
 
-  out = cropData( padded, N );
+  recon = cropData( padded, N );
 end
 

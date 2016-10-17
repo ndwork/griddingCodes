@@ -7,10 +7,13 @@ function traj = makeTrajPts( nDim, type, varargin )
   % Inputs:
   % nDim - the number of dimensions
   % type - the type of trajectory to create
+  %        'poissonDisc' - poisson disc sampling
   %        'random' - (default)
   %        'radial' - evenly spaced radial spokes
   %
   % Parameters for trajectories:
+  % 'poissonDisc': traj = makeTrajPts( nDim, 'poissonDisc', radius );
+  %   radius is the radius of the disc (nominal distance between points)
   % 'random': traj = makeTrajPts( nDim, 'random', nTraj );
   %   nTraj is the number of points in the trajectory
   % 'radial': traj = makeTrajPts( nDim, 'radial', nSpokes, nPtsPerSpoke );
@@ -27,6 +30,8 @@ function traj = makeTrajPts( nDim, type, varargin )
   switch type
     case 'poissonDisc'
       traj = makeTrajPts_poissonDisc( nDim, varargin{:} );
+    case 'propeller'
+      traj = makeTrajPts_propeller( nDim, varargin{:} );
     case 'spinWarp'
       traj = makeTrajPts_spinWarp( nDim, varargin{:} );
     case 'random'
@@ -46,6 +51,30 @@ function traj = makeTrajPts_poissonDisc( nDim, r )
   traj = zeros( numel(kx), 2 );
   traj(:,1) = kx;
   traj(:,2) = ky;
+end
+
+
+function traj = makeTrajPts_propeller( nDim, nReadout, nLines, dkLine, nAngles )
+  if nDim ~= 2, error('Not yet implemented'); end;
+
+  nKperAngle = nReadout * nLines;
+  dAngle = pi/nAngles;
+  
+  dkx = 1 / (nReadout+1);
+  kx = ones(nLines,1) * linspace(-0.5,0.5,nReadout);
+  kyExtent = dkLine * (nLines-1);
+  kyMax = kyExtent/2;
+  ky = (-kyMax:dkLine:kyMax)' * ones(1,nReadout);
+
+  traj = zeros(nReadout*nLines*nAngles,2);
+  for i=1:nAngles
+    thisAngle = (i-1)*dAngle;
+    thisKx = cos(thisAngle)*kx(:) - sin(thisAngle)*ky(:);
+    thisKy = sin(thisAngle)*kx(:) + cos(thisAngle)*ky(:);
+
+    traj((i-1)*nKperAngle+1:i*nKperAngle,1) = thisKx;
+    traj((i-1)*nKperAngle+1:i*nKperAngle,2) = thisKy;
+  end
 end
 
 

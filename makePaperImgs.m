@@ -5,7 +5,7 @@ function makePaperImgs
   datacases = [2,1];
   ds = 4;
   outDir = './paperImgs';
-  algorithms = {'fp','fdLSDC','fdLSDC_con'};
+  algorithms = { 'FP', 'LSDC', 'rLSDC' };
 
 
   mkdir( outDir );
@@ -59,7 +59,7 @@ function makePaperImgs
       outFile = [ datacaseDir, '/paperImg_', thisAlg, '.png' ];
       imwrite( scaledRecon, outFile );
 
-      fprintf( outFileID, ['%4.4i', thisAlg, ', %12.10f \n'], ...
+      fprintf( outFileID, ['%4.4i, ', thisAlg, ', %12.10f \n'], ...
         datacase, mse );
 
       close all;

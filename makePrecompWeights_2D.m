@@ -17,10 +17,10 @@ function [weights,flag,res] = makePrecompWeights_2D( ...
   %   W - the window width in pixels
   %   nC - the number of points to sample the convolution kernel
   %   alg - a string specifying the algorithm to use
-  %     cls - minimizes in the frequency domain
-  %     ls (default) - specifies least squares
-  %     rls - robust least squares
-  %     fp - specifies fixed point iteration
+  %     rLSDC (default) - robust least squares
+  %     LSDC - specifies least squares
+  %     FP - specifies fixed point iteration
+  %     CLS - minimizes in the frequency domain
   %   nIter - specifies the number of iterations of fp method
   %
   % Outputs:
@@ -36,7 +36,7 @@ function [weights,flag,res] = makePrecompWeights_2D( ...
   defaultAlpha = 1.5;
   defaultW = 8;
   defaultNc = 500;
-  defaultAlg = 'ls';
+  defaultAlg = 'rLSDC';
   defaultNIter = 15;
   checknum = @(x) isnumeric(x) && isscalar(x) && (x >= 1);
   p = inputParser;
@@ -55,46 +55,24 @@ function [weights,flag,res] = makePrecompWeights_2D( ...
   flag = 0;
   res = 0;
   switch alg
-    case 'cls'
+    case 'CLS'
       % Least squares in frequency domain on grid points
       [weights,flag,res] = makePrecompWeights_2D_CLS( ...
         traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
-      
-    case 'fdLSDC'
-      [weights,flag,res] = makePrecompWeights_2D_fdLSDC( ...
-        traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
 
-    case 'fdLSDC_con'
-      [weights,flag,res] = makePrecompWeights_2D_fdLSDC_con( ...
-        traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
-      
-    case 'fdLSDC_hub'
-      [weights,flag,res] = makePrecompWeights_2D_fdLSDC_hub( ...
-        traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
-
-    case 'fp'
+    case 'FP'
       % Pipe's method
       [weights,flag,res] = makePrecompWeights_2D_FP( ...
         traj, N, 'alpha', alpha, 'W', W, 'nC', nC, 'nIter', nIter );
-
-    case 'mCLS'
-      % CLS masked over region of support in frequency domain
-      [weights,flag,res] = makePrecompWeights_2D_mCLS( ...
+      
+    case 'LSDC'
+      % Optimization analogy of Pipe's Method
+      [weights,flag,res] = makePrecompWeights_2D_LSDC( ...
         traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
 
-    case 'sdLSDC'
-      % Least squares in the space domain.
-      [weights,flag,res] = makePrecompWeights_2D_sdLSDC( ...
-        traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
-
-    case 'sdLSDC_con'
-      % Constrained least squares in the space domain.
-      [weights,flag,res] = makePrecompWeights_2D_sdLSDC_con( ...
-        traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
-
-    case 'sdLSDC_hub'
-      % Constrained least squares in the space domain.
-      [weights,flag,res] = makePrecompWeights_2D_sdLSDC_hub( ...
+    case 'rLSDC'
+      % LSDC with non-negativity constraint
+      [weights,flag,res] = makePrecompWeights_2D_rLSDC( ...
         traj, N, 'alpha', alpha, 'W', W, 'nC', nC );
 
     otherwise
@@ -102,7 +80,6 @@ function [weights,flag,res] = makePrecompWeights_2D( ...
   end
 
 end
-
 
 
 function [weights,lsFlag,lsRes] = makePrecompWeights_2D_CLS( ...
@@ -230,71 +207,7 @@ function [weights,flag,res] = makePrecompWeights_2D_FP( ...
 end
 
 
-function [weights,lsFlag,lsRes] = makePrecompWeights_2D_mCLS( ...
-  traj, N, varargin )
-
-  defaultAlpha = 1.5;
-  defaultW = 8;
-  defaultNc = 500;
-  checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
-  p = inputParser;
-  p.addParameter( 'alpha', defaultAlpha, checknum );
-  p.addParameter( 'W', defaultW, checknum );
-  p.addParameter( 'nC', defaultNc, checknum );
-  p.parse( varargin{:} );
-  alpha = p.Results.alpha;
-  W = p.Results.W;
-  nC = p.Results.nC;
-
-  iteration = 0;
-
-  % Make the Kaiser Bessel convolution kernel
-  nGrid = ceil( alpha * N );
-  trueAlpha = max( nGrid ./ N );
-  Ny=N(1);  Nx=N(2);
-  Gy = Ny;
-  [kCy,Cy,~] = makeKbKernel( Gy, Ny, trueAlpha, W, nC );
-  Gx = Nx;
-  [kCx,Cx,~] = makeKbKernel( Gx, Nx, trueAlpha, W, nC );
-
-  cGrid = 2*N;
-  function out = applyA( in, type )
-    if nargin > 1 && strcmp( type, 'transp' )
-      in = reshape( in, cGrid );
-      out = applyCT_2D( in, traj, cGrid, kCy, kCx, Cy, Cx );
-    else
-      out = applyC_2D( in, traj, cGrid, kCy, kCx, Cy, Cx );
-      out = out(:);
-
-      iteration = iteration + 1;
-      if mod( iteration, 5 ) == 0,
-        disp(['makePrecompWeights_2D_mCLS working on iteration ', ...
-          num2str(iteration) ]);
-      end
-      
-      %residuals(iteration) = norm( out(:) - b(:), 2 ) / norm(b(:),2);
-      %if iteration>10, plot( residuals(1:iteration) ); drawnow; end
-    end
-  end
-
-tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
-
-  b=ones(cGrid);
-  tolerance = 1d-6;
-  maxIter = 1000;
-  [weights,lsFlag,lsRes,lsIter,lsResVec,lsVec] = lsqr( @applyA, b(:), tolerance, maxIter );
-
-  scale = showPSF( weights, traj, N, 'imgTitle', 'mCLS');
-  weights = scale * weights;
-
-  %noise = randn(size(weights))*0.1;
-  %noisyWeights = weights .* ( 1 + noise );
-  %showPSF( noisyWeights, traj, N );
-end
-
-
-
-function [weights,lsFlag,lsRes] = makePrecompWeights_2D_fdLSDC( ...
+function [weights,lsFlag,lsRes] = makePrecompWeights_2D_LSDC( ...
   traj, N, varargin )
   % Optimization analogy of Pipe's algorithm
 
@@ -332,7 +245,7 @@ function [weights,lsFlag,lsRes] = makePrecompWeights_2D_fdLSDC( ...
 
       iteration = iteration + 1;
       if mod( iteration, 5 ) == 0,
-        disp(['makePrecompWeights_2D_fdLSDC working on iteration ', ...
+        disp(['makePrecompWeights_2D_LSDC working on iteration ', ...
           num2str(iteration) ]);
       end
       %residuals(iteration) = norm( out(:) - b(:), 2 ) / norm(b(:),2);
@@ -357,8 +270,9 @@ tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
 end
 
 
-function [weights,flag,residual] = makePrecompWeights_2D_fdLSDC_con( ...
+function [weights,flag,residual] = makePrecompWeights_2D_rLSDC( ...
   traj, N, varargin )
+  % Method of LSDC with a non-negativity constraint
 
   defaultAlpha = 1.5;
   defaultW = 8;
@@ -392,7 +306,7 @@ function [weights,flag,residual] = makePrecompWeights_2D_fdLSDC_con( ...
 
       iteration = iteration + 1;
       if mod( iteration, 5 ) == 0,
-        disp(['makePrecompWeights_2D_fdLSDC_con working on iteration ', ...
+        disp(['makePrecompWeights_2D_rLSDC working on iteration ', ...
           num2str(iteration) ]);
       end
       %residuals(iteration) = norm( out(:) - b(:), 2 ) / norm(b(:),2);
@@ -441,355 +355,4 @@ tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
   %noisyWeights = weights .* ( 1 + noise );
   %showPSF( noisyWeights, traj, N );
 end
-
-
-
-
-function [weights,flag,residual] = makePrecompWeights_2D_fdLSDC_hub( ...
-  traj, N, varargin )
-  % Least squares analogy of Pipe's algorithm
-
-  defaultAlpha = 1.5;
-  defaultW = 8;
-  defaultNc = 500;
-  checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
-  p = inputParser;
-  p.addParameter( 'alpha', defaultAlpha, checknum );
-  p.addParameter( 'W', defaultW, checknum );
-  p.addParameter( 'nC', defaultNc, checknum );
-  p.parse( varargin{:} );
-  alpha = p.Results.alpha;
-  W = p.Results.W;
-  nC = p.Results.nC;
-
-  iteration = 0;
-
-  % Make the Kaiser Bessel convolution kernel
-  nGrid = ceil( alpha * N );
-  trueAlpha = max( nGrid ./ N );
-  Ny=N(1);  Nx=N(2);
-  Gy = Ny;
-  [kCy,Cy,~] = makeKbKernel( Gy, Ny, trueAlpha, W, nC );
-  Gx = Nx;
-  [kCx,Cx,~] = makeKbKernel( Gx, Nx, trueAlpha, W, nC );
-
-  cGrid = 2*N;
-  
-  function out = applyA( in, type )
-    if nargin > 1 && strcmp( type, 'transp' )
-      out = applyCT_2D( in, traj, 0, kCy, kCx, Cy, Cx, traj );
-    else
-      out = applyC_2D( in, traj, 0, kCy, kCx, Cy, Cx, traj );
-
-      iteration = iteration + 1;
-      if mod( iteration, 5 ) == 0,
-        disp(['makePrecompWeights_2D_fdLSDC_hub working on iteration ', ...
-          num2str(iteration) ]);
-      end
-      %residuals(iteration) = norm( out(:) - b(:), 2 ) / norm(b(:),2);
-      %if iteration>10, plot( residuals(1:iteration) ); drawnow; end
-    end
-  end
-
-  nTraj = size(traj,1);
-  b = ones(nTraj,1);
-  function y = linop_4_tfocs( in, mode )
-    switch mode,
-      case 0
-        y = [numel(b), nTraj];
-      case 1
-        y = applyA( in );
-      case 2
-        y = applyA( in, 'transp' );
-    end
-  end
-  %varargout = linop_test( @linop_4_tfocs );
-
-  opts.alg = 'N83';
-  opts = tfocs;
-  opts.maxIts = 1000;
-  opts.printEvery = 1;
-  opts.tol = 1d-4;
-  x0 = ones( nTraj, 1 );
-  weights = tfocs( smooth_huber(0.02), { @linop_4_tfocs, -b }, [], x0, opts );
-
-  if nargout > 1
-    flag = 0;  % tfocs doesn't provide flag
-  end
-  if nargout > 2
-    psf = applyA( weights );
-    residual = norm( psf(:) - b(:), 2 ) / norm(b(:),2);
-  end
-  
-tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
-
-  scale = showPSF( weights, traj, N, 'imgTitle', 'fdLSDC_hub');
-  weights = scale * weights;
-
-  %noise = randn(size(weights))*0.1;
-  %noisyWeights = weights .* ( 1 + noise );
-  %showPSF( noisyWeights, traj, N );
-end
-
-
-
-function [weights,lsFlag,lsRes] = makePrecompWeights_2D_sdLSDC( ...
-  traj, N, varargin )
-
-  defaultAlpha = 1.5;
-  defaultW = 8;
-  defaultNc = 500;
-  checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
-  p = inputParser;
-  p.addParameter( 'alpha', defaultAlpha, checknum );
-  p.addParameter( 'W', defaultW, checknum );
-  p.addParameter( 'nC', defaultNc, checknum );
-  p.parse( varargin{:} );
-  alpha = p.Results.alpha;
-  W = p.Results.W;
-  nC = p.Results.nC;
-
-  nGrid = ceil( alpha * N );
-  trueAlpha = max( nGrid ./ N );
-
-  cgrid = 2*N;
-  radialImg = makeRadialImg( cgrid );
-  b=zeros(cgrid);  b(1,1)=1;  b=fftshift(b);
-  mask = double( radialImg <= min(N) );
-  normWeights = ones(cgrid);
-  normWeights(b>0) = sqrt( prod(cgrid) );
-  b = normWeights .* b;
-
-  iteration = 0;
-  function out = applyWA( in, type )
-    if nargin > 1 && strcmp( type, 'transp' )
-      nIn = numel(in);
-      in = in(1:nIn/2) + 1i*(in(nIn/2+1:end));
-      in = reshape( in, cgrid );
-      masked = mask .* normWeights .* in;
-      out = iGrid_2D( masked, traj, 'alpha', trueAlpha, 'W', W, 'nC', nC );
-      out = real(out);
-    else
-      iGridTed = iGridT_2D( in, traj, cgrid, 'alpha', trueAlpha, 'W', W, 'nC', nC );
-      masked = normWeights .* mask .* iGridTed;
-      out = [ real(masked(:)); imag(masked(:)); ];
-
-      iteration = iteration + 1;
-      if mod( iteration, 5 ) == 0
-        disp(['makePrecompWeights_2D_sdLSDC working on iteration ', ...
-          num2str(iteration) ]);
-      end
-      %residuals(iteration) = norm( out(:) - b(:), 2 ) / norm(b(:),2);
-      %if iteration>10, plot( residuals(1:iteration) ); drawnow; end
-    end
-  end
-
-tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
-
-  tolerance = 1d-6;
-  maxIter = 1000;
-  Wb = [ real(b(:)); imag(b(:)); ];
-  [weights,lsFlag,lsRes] = lsqr( @applyWA, Wb(:), tolerance, maxIter );
-
-  scale = showPSF( weights, traj, N, mask, 'imgTitle', 'sdLSDC' );
-  weights = scale * weights;
-
-  %noise = randn(size(weights))*0.1;
-  %noisyWeights = weights .* ( 1 + noise );
-  %showPSF( noisyWeights, traj, N, mask );
-end
-
-
-function [weights,flag,residual] = makePrecompWeights_2D_sdLSDC_con( ...
-  traj, N, varargin )
-
-  defaultAlpha = 1.5;
-  defaultW = 8;
-  defaultNc = 500;
-  checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
-  p = inputParser;
-  p.addParameter( 'alpha', defaultAlpha, checknum );
-  p.addParameter( 'W', defaultW, checknum );
-  p.addParameter( 'nC', defaultNc, checknum );
-  p.parse( varargin{:} );
-  alpha = p.Results.alpha;
-  W = p.Results.W;
-  nC = p.Results.nC;
-
-  nGrid = ceil( alpha * N );
-  trueAlpha = max( nGrid ./ N );
-
-  cgrid = 2*N;
-  radialImg = makeRadialImg( cgrid );
-  b=zeros(cgrid);  b(1,1)=1;  b=fftshift(b);
-  mask = double( radialImg <= min(N) );
-  normWeights = ones(cgrid);
-  normWeights(b>0) = sqrt( prod(cgrid) );
-  b = normWeights .* b;
-
-  iteration = 0;
-  function out = applyA( in, type )
-    if nargin > 1 && strcmp( type, 'transp' )
-      nIn = numel(in);
-      in = in(1:nIn/2) + 1i*(in(nIn/2+1:end));
-      in = reshape( in, cgrid );
-      masked = mask .* normWeights .* in;
-      out = iGrid_2D( masked, traj, 'alpha', trueAlpha, 'W', W, 'nC', nC );
-      out = real(out);
-    else
-      iGridTed = iGridT_2D( in, traj, cgrid, 'alpha', trueAlpha, 'W', W, 'nC', nC );
-      masked = normWeights .* mask .* iGridTed;
-      out = [ real(masked(:)); imag(masked(:)) ];
-
-      iteration = iteration + 1;
-      if mod( iteration, 5 )==0
-        disp(['makePrecompWeights_2D_con_sdLSDC working on iteration ', ...
-          num2str(iteration) ]);
-      end
-      
-      %residuals(iteration) = norm( out(:) - b(:), 2 ) / norm(b(:),2);
-      %if iteration>10, plot( residuals(1:iteration) ); drawnow; end
-    end
-  end
-
-tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
-
-  nTraj = size(traj,1);
-  Wb = [ real(b(:)); imag(b(:)); ];
-  function y = linop_4_tfocs( in, mode )
-    switch mode,
-      case 0
-        y = [numel(Wb), nTraj];
-      case 1
-        y = applyA( in );
-      case 2
-        y = applyA( in, 'transp' );
-    end
-  end
-  %varargout = linop_test( @linop_4_tfocs );
-
-  opts.alg = 'N83';
-  opts = tfocs;
-  opts.maxIts = 1000;
-  opts.printEvery = 1;
-  opts.tol = 1d-4;
-  x0 = ones( nTraj, 1 );
-  %[ x, out ] = tfocs( smoothF, affineF, nonsmoothF, x0, opts );
-  %weights = tfocs_N83( smooth_quad, { @linop_4_tfocs, -Wb(:) }, proj_Rplus, x0, opts );
-  %weights = tfocs( smooth_quad, { @linop_4_tfocs, -Wb(:) }, proj_Rplus, x0, opts );
-  weights = tfocs( smooth_huber(0.02), { @linop_4_tfocs, -Wb(:) }, proj_Rplus, x0, opts );
-
-  if nargout > 1
-    flag = 0;  % tfocs doesn't provide flag
-  end
-  if nargout > 2
-    Wpsf = applyA( weights );
-    residual = norm( Wpsf(:) - Wb(:), 2 ) / norm(Wb(:),2);
-  end
-
-  scale = showPSF( weights, traj, N, mask );
-  weights = scale * weights;
-
-  %noise = randn(size(weights))*0.1;
-  %noisyWeights = weights .* ( 1 + noise );
-  %showPSF( noisyWeights, traj, N, mask );
-end
-
-
-
-function [weights,flag,residual] = makePrecompWeights_2D_sdLSDC_hub( ...
-  traj, N, varargin )
-
-  defaultAlpha = 1.5;
-  defaultW = 8;
-  defaultNc = 500;
-  checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
-  p = inputParser;
-  p.addParameter( 'alpha', defaultAlpha, checknum );
-  p.addParameter( 'W', defaultW, checknum );
-  p.addParameter( 'nC', defaultNc, checknum );
-  p.parse( varargin{:} );
-  alpha = p.Results.alpha;
-  W = p.Results.W;
-  nC = p.Results.nC;
-
-  nGrid = ceil( alpha * N );
-  trueAlpha = max( nGrid ./ N );
-
-  cgrid = 2*N;
-  radialImg = makeRadialImg( cgrid );
-  b=zeros(cgrid);  b(1,1)=1;  b=fftshift(b);
-  mask = double( radialImg <= min(N) );
-  normWeights = ones(cgrid);
-  normWeights(b>0) = sqrt( prod(cgrid) );
-  b = normWeights .* b;
-
-  iteration = 0;
-  function out = applyA( in, type )
-    if nargin > 1 && strcmp( type, 'transp' )
-      nIn = numel(in);
-      in = in(1:nIn/2) + 1i*(in(nIn/2+1:end));
-      in = reshape( in, cgrid );
-      masked = mask .* normWeights .* in;
-      out = iGrid_2D( masked, traj, 'alpha', trueAlpha, 'W', W, 'nC', nC );
-      out = real(out);
-    else
-      iGridTed = iGridT_2D( in, traj, cgrid, 'alpha', trueAlpha, 'W', W, 'nC', nC );
-      masked = normWeights .* mask .* iGridTed;
-      out = [ real(masked(:)); imag(masked(:)) ];
-
-      iteration = iteration + 1;
-      if mod( iteration, 5 )==0
-        disp(['makePrecompWeights_2D_con_sdLSDC working on iteration ', ...
-          num2str(iteration) ]);
-      end
-      
-      %residuals(iteration) = norm( out(:) - b(:), 2 ) / norm(b(:),2);
-      %if iteration>10, plot( residuals(1:iteration) ); drawnow; end
-    end
-  end
-
-tmp=0; tmp2=0; tmp3=0; tmp4=0; x0=0;
-
-  nTraj = size(traj,1);
-  Wb = [ real(b(:)); imag(b(:)); ];
-  function y = linop_4_tfocs( in, mode )
-    switch mode,
-      case 0
-        y = [numel(Wb), nTraj];
-      case 1
-        y = applyA( in );
-      case 2
-        y = applyA( in, 'transp' );
-    end
-  end
-  %varargout = linop_test( @linop_4_tfocs );
-
-  opts.alg = 'N83';
-  opts = tfocs;
-  opts.maxIts = 1000;
-  opts.printEvery = 1;
-  opts.tol = 1d-4;
-  x0 = ones( nTraj, 1 );
-  %[ x, out ] = tfocs( smoothF, affineF, nonsmoothF, x0, opts );
-  %weights = tfocs_N83( smooth_quad, { @linop_4_tfocs, -Wb(:) }, proj_Rplus, x0, opts );
-  %weights = tfocs( smooth_quad, { @linop_4_tfocs, -Wb(:) }, proj_Rplus, x0, opts );
-  weights = tfocs( smooth_huber(0.02), { @linop_4_tfocs, Wb(:) }, [], x0, opts );
-
-  if nargout > 1
-    flag = 0;  % tfocs doesn't provide flag
-  end
-  if nargout > 2
-    Wpsf = applyA( weights );
-    residual = norm( Wpsf(:) - Wb(:), 2 ) / norm(Wb(:),2);
-  end
-
-  scale = showPSF( weights, traj, N, mask );
-  weights = scale * weights;
-
-  %noise = randn(size(weights))*0.1;
-  %noisyWeights = weights .* ( 1 + noise );
-  %showPSF( noisyWeights, traj, N, mask );
-end
-
 
