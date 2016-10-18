@@ -1,13 +1,13 @@
 
-function recon = grid_2D( F, traj, N, weights, varargin )
-  % recon = grid_2D( F, traj, N, weights, ...
+function recon = grid_2D( F, kTraj, N, weights, varargin )
+  % recon = grid_2D( F, kTraj, N, weights, ...
   %   [ 'alpha', alpha, 'W', W, 'nC', nC ] )
   %
   % Image reconstruction with Gridding
   %
   % Inputs:
   %   F is a 1D array representing the Fourier values
-  %   traj is a Mx2 element array specifying the k-space trajectory.
+  %   kTraj is a Mx2 element array specifying the k-space trajectory.
   %     The first/second column are the kx/ky locations.
   %     The units are normalized to [-0.5,0.5).
   %   N is a 2 element array [Ny Nx] representing the number of grid points
@@ -44,7 +44,7 @@ function recon = grid_2D( F, traj, N, weights, varargin )
 
   weightedF = F .* weights;
 
-  padded = iGridT_2D( weightedF, traj, nGrid, ...
+  padded = iGridT_2D( weightedF, kTraj, nGrid, ...
     'alpha', trueAlpha, 'W', W, 'nC', nC );
 
   recon = cropData( padded, N );

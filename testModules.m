@@ -142,6 +142,21 @@ function testModules
 %   error = abs( innerProd1 - innerProd2 );
 %   disp([ 'applyC/applyCT 2D Adjointness error:  ', num2str(error) ]);
 % 
+%   %% Make sure applyC2Grid_2D and applyCT2Grid_2D are adjoints
+%   N = [ 50, 50 ];
+%   nY = 20;
+%   kTraj = rand( nY, 2 ) - 0.5;
+%   x = rand( N );
+%   y = rand( nY, 1 );
+%   [kCy,Cy] = makeKbKernel( N(1), N(2) );
+%   [kCx,Cx] = makeKbKernel( N(1), N(2) );
+%   Ay = applyC2Grid_2D( y, kTraj, N, kCy, kCx, Cy, Cx );
+%   ATx = applyCT2Grid_2D( x, kTraj, N, kCy, kCx, Cy, Cx );
+%   %ATx = applyCT_2D_v3( x, kTraj, N, kCy, kCx, Cy, Cx );
+%   innerProd1 = dotP( Ay, x );
+%   innerProd2 = dotP( y, ATx );
+%   error = abs( innerProd1 - innerProd2 );
+%   disp([ 'applyC2Grid/applyCT2Grid 2D Adjointness error:  ', num2str(error) ]);
 % 
 %   %% Make sure iGrid_2D and iGridT_2D are adjoints
 %   sizeX = [ 50, 50 ];
