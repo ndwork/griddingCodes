@@ -18,7 +18,7 @@ function [kC,C,c] = makeKbKernel( G, N, varargin )
   defaultAlpha = 1.5;
   defaultW = 8;
   defaultNc = 500;
-  checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
+  checknum = @(x) isnumeric(x) && isscalar(x) && (x >= 1);
   p = inputParser;
   p.addOptional( 'alpha', defaultAlpha, checknum );
   p.addOptional( 'W', defaultW, checknum );
@@ -28,7 +28,7 @@ function [kC,C,c] = makeKbKernel( G, N, varargin )
   W = p.Results.W;
   nC = p.Results.nC;
 
-  kw = W/G;
+  kw = W/G;  % kernel width (in k-space samples)
   kC = transpose(linspace(0, 0.5*kw, nC));
 
   beta = pi * sqrt( W*W/(alpha*alpha) * (alpha-0.5)^2 - 0.8 );
@@ -36,7 +36,7 @@ function [kC,C,c] = makeKbKernel( G, N, varargin )
 
   maxC = max( C );
   C = C / maxC;
-  
+
   x = size2imgCoordinates( N );
   tmp = sqrt( (pi*kw*x).^2 - beta*beta );
   c = sinc( tmp / pi );

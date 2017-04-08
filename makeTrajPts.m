@@ -12,18 +12,23 @@ function traj = makeTrajPts( nDim, type, varargin )
   %        'radial' - evenly spaced radial spokes
   %
   % Parameters for trajectories:
-  % 'poissonDisc': traj = makeTrajPts( nDim, 'poissonDisc', radius );
-  %   radius is the radius of the disc (nominal distance between points)
-  % 'random': traj = makeTrajPts( nDim, 'random', nTraj );
-  %   nTraj is the number of points in the trajectory
-  % 'radial': traj = makeTrajPts( nDim, 'radial', nSpokes, nPtsPerSpoke );
+  %   'poissonDisc': traj = makeTrajPts( nDim, 'poissonDisc', radius );
+  %     radius is the radius of the disc (nominal distance between points)
+  %   'random': traj = makeTrajPts( nDim, 'random', nTraj );
+  %     nTraj is the number of points in the trajectory
+  %   'radial': traj = makeTrajPts( nDim, 'radial', nSpokes, nPtsPerSpoke );
   %
   % To view the sampling pattern:
-  % plot( kTraj(:,1), kTraj(:,2), 'o', 'MarkerFaceColor', 'k', ...
-  %   'MarkerEdgeColor', 'k', 'MarkerSize', 4 );
-  % set( gca, 'xTick', [], 'yTick', [] );
+  %   plot( kTraj(:,1), kTraj(:,2), 'o', 'MarkerFaceColor', 'k', ...
+  %     'MarkerEdgeColor', 'k', 'MarkerSize', 4 );
+  %   set( gca, 'xTick', [], 'yTick', [] );
   %
   % Written by Nicholas Dwork - Copyright 2016
+  %
+  % This software is offered under the GNU General Public License 3.0.  It
+  % is offered without any warranty expressed or implied, including the
+  % implied warranties of merchantability or fitness for a particular
+  % purpose.
 
   if nargin<2, type=''; end;
 
@@ -59,8 +64,7 @@ function traj = makeTrajPts_propeller( nDim, nReadout, nLines, dkLine, nAngles )
 
   nKperAngle = nReadout * nLines;
   dAngle = pi/nAngles;
-  
-  dkx = 1 / (nReadout+1);
+
   kx = ones(nLines,1) * linspace(-0.5,0.5,nReadout);
   kyExtent = dkLine * (nLines-1);
   kyMax = kyExtent/2;

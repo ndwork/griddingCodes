@@ -1,9 +1,19 @@
 
-function out = applyC_2D( F, traj, N, kCy, kCx, Cy, Cx, gridKs )
-  % out = applyC_2D( F, traj, N, kCy, kCx, Cy, Cx [, gridKs ] )
+function out = applyC_2D( F, kTraj, N, kCy, kCx, Cy, Cx, gridKs, varargin )
+  % out = applyC_2D( F, kTraj, N, kCy, kCx, Cy, Cx [, gridKs, type, 'noCirc' ] )
+  %
+  % Inputs:
+  % type:  by default, performs a circular convolution  If type=='noCirc',
+  % then it performs a regular(non-circular) convolution.
   %
   % Written by Nicholas Dwork - Copyright 2016
 
+  defaultType = [];
+  p = inputParser;
+  p.addParameter( 'type', defaultType );
+  p.parse( varargin{:} );
+  type = p.Results.type;
+  
   if nargin < 8
     gridKs = size2fftCoordinates( N );
     gridKy=gridKs{1};  gridKx=gridKs{2};
@@ -13,62 +23,53 @@ function out = applyC_2D( F, traj, N, kCy, kCx, Cy, Cx, gridKs )
     gridKx = gridKs(:,2);
   end
 
-  nTraj = size(traj,1);
+  nTraj = size(kTraj,1);
   kws = [ max(kCy), max(kCx) ];
   kDistThreshY = kws(1);
   kDistThreshX = kws(2);
-  tmp = cell(nTraj,1);
-  parfor trajIndx=1:nTraj
-    distsKy = abs( traj(trajIndx,1) - gridKy );
-    distsKx = abs( traj(trajIndx,2) - gridKx );
+  out = zeros( size(gridKy) );
+  for trajIndx=1:nTraj
+    distsKy = abs( kTraj(trajIndx,1) - gridKy );
+    distsKx = abs( kTraj(trajIndx,2) - gridKx );
     shortDistIndxs = find( distsKy < kDistThreshY & ...
                            distsKx < kDistThreshX );
     shortDistsKy = distsKy( shortDistIndxs );
     shortDistsKx = distsKx( shortDistIndxs );
     CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
     CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
-    %out(shortDistIndxs) = out(shortDistIndxs) + ...
-    %  F(trajIndx) * ( CValsY .* CValsX );
-
-    tmp{trajIndx} = struct( ...
-      'indxs', shortDistIndxs, ...
-      'values', F(trajIndx) * ( CValsY .* CValsX ) ...
-    );
+    out(shortDistIndxs) = out(shortDistIndxs) + ...
+      F(trajIndx) * ( CValsY .* CValsX );
   end
 
-  out = zeros( size(gridKy) );
-  for trajIndx=1:nTraj
-    out( tmp{trajIndx}.indxs ) = out( tmp{trajIndx}.indxs ) + ...
-      tmp{trajIndx}.values;
-  end
+  if ~strcmp( type, 'noCirc' )
+    for dim=1:2
+      alt = zeros( size(kTraj) );
 
-  onesCol = ones(nTraj,1);
-  for dim=1:2
-    alt = zeros( size(traj) );
-    alt(:,dim) = onesCol;
+      for altDir=[-1 1]
+        alt(:,dim) = altDir;
+        newTraj = kTraj + alt;
+        if altDir < 0
+          newTrajIndxs = find( newTraj(:,dim) > -0.5-kws(dim) );
+        else
+          newTrajIndxs = find( newTraj(:,dim) < 0.5+kws(dim) );
+        end
 
-    for altDir=[-1 1]
-      NewTraj = traj + altDir*alt;
-      if altDir < 0
-        NewTrajIndxs = find( NewTraj(:,dim) > -0.5-kws(dim) );
-      else
-        NewTrajIndxs = find( NewTraj(:,dim) < 0.5+kws(dim) );
-      end
-
-      NewTraj = NewTraj( NewTrajIndxs, : );
-      for i=1:numel(NewTrajIndxs)
-        trajIndx = NewTrajIndxs(i);
-        NewDistsKy = abs( NewTraj(i,1) - gridKy );
-        NewDistsKx = abs( NewTraj(i,2) - gridKx );
-        NewShortDistIndxs = find( NewDistsKy < kDistThreshY & ...
-                                  NewDistsKx < kDistThreshX );
-        NewShortDistsKy = NewDistsKy( NewShortDistIndxs );
-        NewShortDistsKx = NewDistsKx( NewShortDistIndxs );
-        NewCValsY = interp1( kCy, Cy, NewShortDistsKy, 'linear', 0 );
-        NewCValsX = interp1( kCx, Cx, NewShortDistsKx, 'linear', 0 );
-        out(NewShortDistIndxs) = out(NewShortDistIndxs) + ...
-          F(trajIndx) * ( NewCValsY .* NewCValsX );
+        newTraj = newTraj( newTrajIndxs, : );
+        for i=1:numel(newTrajIndxs)
+          trajIndx = newTrajIndxs(i);
+          NewDistsKy = abs( newTraj(i,1) - gridKy );
+          NewDistsKx = abs( newTraj(i,2) - gridKx );
+          NewShortDistIndxs = find( NewDistsKy < kDistThreshY & ...
+                                    NewDistsKx < kDistThreshX );
+          NewShortDistsKy = NewDistsKy( NewShortDistIndxs );
+          NewShortDistsKx = NewDistsKx( NewShortDistIndxs );
+          NewCValsY = interp1( kCy, Cy, NewShortDistsKy, 'linear', 0 );
+          NewCValsX = interp1( kCx, Cx, NewShortDistsKx, 'linear', 0 );
+          out(NewShortDistIndxs) = out(NewShortDistIndxs) + ...
+            F(trajIndx) * ( NewCValsY .* NewCValsX );
+        end
       end
     end
   end
+
 end
