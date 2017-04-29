@@ -1,6 +1,6 @@
 
-function out = applyC_2D( F, kTraj, N, kCy, kCx, Cy, Cx, gridKs, varargin )
-  % out = applyC_2D( F, kTraj, N, kCy, kCx, Cy, Cx [, gridKs, type, 'noCirc' ] )
+function out = applyC_2D( F, kTraj, N, kCy, kCx, Cy, Cx, varargin )
+  % out = applyC_2D( F, kTraj, N, kCy, kCx, Cy, Cx [, gridKs, 'type', type ] )
   %
   % Inputs:
   % type:  by default, performs a circular convolution  If type=='noCirc',
@@ -8,13 +8,16 @@ function out = applyC_2D( F, kTraj, N, kCy, kCx, Cy, Cx, gridKs, varargin )
   %
   % Written by Nicholas Dwork - Copyright 2016
 
+  defaultGridKs = [];
   defaultType = [];
   p = inputParser;
+  p.addOptional( 'gridKs', defaultGridKs );
   p.addParameter( 'type', defaultType );
   p.parse( varargin{:} );
+  gridKs = p.Results.gridKs;
   type = p.Results.type;
-  
-  if nargin < 8
+
+  if numel( gridKs ) == 0
     gridKs = size2fftCoordinates( N );
     gridKy=gridKs{1};  gridKx=gridKs{2};
     [gridKx,gridKy] = meshgrid(gridKx,gridKy);
@@ -23,22 +26,42 @@ function out = applyC_2D( F, kTraj, N, kCy, kCx, Cy, Cx, gridKs, varargin )
     gridKx = gridKs(:,2);
   end
 
+  if strcmp( type, 'noCirc' )
+    altDirs = [0];
+  else
+    altDirs = -1:1;
+  end
+
   nTraj = size(kTraj,1);
   kws = [ max(kCy), max(kCx) ];
   kDistThreshY = kws(1);
   kDistThreshX = kws(2);
-  out = zeros( size(gridKy) );
-  for trajIndx=1:nTraj
-    distsKy = abs( kTraj(trajIndx,1) - gridKy );
-    distsKx = abs( kTraj(trajIndx,2) - gridKx );
-    shortDistIndxs = find( distsKy < kDistThreshY & ...
-                           distsKx < kDistThreshX );
-    shortDistsKy = distsKy( shortDistIndxs );
-    shortDistsKx = distsKx( shortDistIndxs );
-    CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
-    CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
-    out(shortDistIndxs) = out(shortDistIndxs) + ...
-      F(trajIndx) * ( CValsY .* CValsX );
+  sGridKy = size(gridKy);
+  segLength = 40;
+  nSegs = ceil( nTraj / segLength );
+  outs = cell(1,1,nSegs);
+  parfor segIndx=1:nSegs
+    startTrajIndx = (segIndx-1) * segLength + 1;
+    endTrajIndx = min( startTrajIndx+segLength-1, nTraj );
+    segOut = zeros( sGridKy );
+  
+    for trajIndx = startTrajIndx:endTrajIndx
+      distsKy = abs( kTraj(trajIndx,1) - gridKy );                               %#ok<PFBNS>
+      distsKx = abs( kTraj(trajIndx,2) - gridKx );
+      shortDistIndxs = find( distsKy < kDistThreshY & ...
+                             distsKx < kDistThreshX );
+      shortDistsKy = distsKy( shortDistIndxs );
+      shortDistsKx = distsKx( shortDistIndxs );
+      CValsY = interp1( kCy, Cy, shortDistsKy, 'linear', 0 );
+      CValsX = interp1( kCx, Cx, shortDistsKx, 'linear', 0 );
+      segOut(shortDistIndxs) = segOut(shortDistIndxs) + ...
+        F(trajIndx) * ( CValsY .* CValsX );
+    end
+    outs{segIndx} = segOut;
+  end
+  out = outs{1};
+  for segIndx=2:nSegs
+    out = out + outs{segIndx};
   end
 
   if ~strcmp( type, 'noCirc' )

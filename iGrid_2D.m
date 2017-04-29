@@ -24,7 +24,7 @@ function F = iGrid_2D( data, traj, varargin )
   defaultAlpha = 1.5;
   defaultW = 8;
   defaultNc = 500;
-  checknum = @(x) isnumeric(x) && isscalar(x) && (x > 1);
+  checknum = @(x) isnumeric(x) && isscalar(x) && (x >= 1);
   p = inputParser;
   p.addParameter( 'alpha', defaultAlpha, checknum );
   p.addParameter( 'W', defaultW, checknum );

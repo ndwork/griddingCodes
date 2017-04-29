@@ -18,20 +18,17 @@ function [scale,mse] = showPSF( weights, traj, N, varargin )
   W = 8;
   nC = 500;
 
-  psf = iGridT_2D( weights, traj, nGrid, 'alpha', 2.0, 'W', W, 'nC', nC );
+  psf = iGridT_2D( weights, traj, nGrid, 'W', W, 'nC', nC );
   psf = cropData( psf, 2*N );
-
-  if isempty(mask)
-    mask = ones( size(psf) );
-  end
-
+  if isempty(mask), mask = ones( size(psf) ); end;
   mask = cropData( mask, nGrid );
   psf = mask .* psf;
+  scale = 1 ./ max(real(psf(:)));
+
+  psf = psf * scale;
   absPsf=abs(psf);
   absPsf_dB = 20*log10(absPsf);
   absPsf_dB(~isfinite(absPsf_dB)) = 0;
-
-  scale = 1 ./ max(absPsf(:));
   
   figure;
   imshow( imresize(absPsf_dB,2,'nearest'), [-100 0] );

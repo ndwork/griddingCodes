@@ -8,15 +8,25 @@ function traj = makeTrajPts( nDim, type, varargin )
   % nDim - the number of dimensions
   % type - the type of trajectory to create
   %        'poissonDisc' - poisson disc sampling
+  %        'propeller'
   %        'random' - (default)
   %        'radial' - evenly spaced radial spokes
+  %        'rosette' - rosette flower
+  %        'spinWarp'
   %
   % Parameters for trajectories:
   %   'poissonDisc': traj = makeTrajPts( nDim, 'poissonDisc', radius );
   %     radius is the radius of the disc (nominal distance between points)
+  %   'propeller': traj = makeTrajPts( nDim, nReadout, nLines, dkLine, ...
+  %     nAngles );
   %   'random': traj = makeTrajPts( nDim, 'random', nTraj );
   %     nTraj is the number of points in the trajectory
   %   'radial': traj = makeTrajPts( nDim, 'radial', nSpokes, nPtsPerSpoke );
+  %   'rosette': traj = makeTrajPts( nDim, 'rosette', nTraj, dt, f1, f2 );
+  %     nTraj is the number of points in the trajectory
+  %     dt is the spacing between samples
+  %     f1 is the amplitude's frequency
+  %     f2 is the phase's frequency
   %
   % To view the sampling pattern:
   %   plot( kTraj(:,1), kTraj(:,2), 'o', 'MarkerFaceColor', 'k', ...
@@ -43,10 +53,15 @@ function traj = makeTrajPts( nDim, type, varargin )
       traj = makeTrajPts_random(nDim, varargin{:} );
     case 'radial'
       traj = makeTrajPts_radial(nDim, varargin{:} );
+    case 'rosette'
+      traj = makeTrajPts_rosette(nDim, varargin{:} );
     otherwise
       traj = makeTrajPts_random(nDim, varargin{:} );
   end
 
+  %plot( traj(:,1), traj(:,2), 'o', 'MarkerFaceColor', 'k', ...
+  %  'MarkerEdgeColor', 'k', 'MarkerSize', 2 );
+  %set( gca, 'xTick', [], 'yTick', [] );
 end
 
 
@@ -60,7 +75,7 @@ end
 
 
 function traj = makeTrajPts_propeller( nDim, nReadout, nLines, dkLine, nAngles )
-  if nDim ~= 2, error('Not yet implemented'); end;
+  if nDim ~= 2, error('Propeller is a 2D Trajectory'); end;
 
   nKperAngle = nReadout * nLines;
   dAngle = pi/nAngles;
@@ -107,7 +122,7 @@ end
 
 
 function traj = makeTrajPts_radial( nDim, nSpokes, nPtsPerSpoke )
-  if nDim ~= 2, error('Radial trajector just for 2 dimensions'); end;
+  if nDim ~= 2, error('Radial trajectory just for 2 dimensions'); end;
 
   thetas = linspace( 0, 2*pi, nSpokes );
   rs = linspace( 0, 0.5, nPtsPerSpoke );
@@ -119,6 +134,17 @@ function traj = makeTrajPts_radial( nDim, nSpokes, nPtsPerSpoke )
     traj(lowIndx:highIndx,1) = rs * cos(thetas(i));
     traj(lowIndx:highIndx,2) = rs * sin(thetas(i));
   end
+end
+
+
+function traj = makeTrajPts_rosette( nDim, nPtsPerCycle, nCycles, f1, f2 )
+  if nDim ~= 2, error('Rosette trajectory just for 2 dimensions'); end;
+
+  nPts = nPtsPerCycle * nCycles;
+  
+  traj = zeros( nK, 2 );
+  traj(:,1) = 0.5 * cos( 2*pi * f1 * t ) .* sin( 2*pi * f2 * t );
+  traj(:,2) = 0.5 * cos( 2*pi * f1 * t ) .* cos( 2*pi * f2 * t );
 end
 
 

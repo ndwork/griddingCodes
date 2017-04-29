@@ -1,21 +1,51 @@
 
 
-function [kTraj,fVals,N,psfMask] = getDatacase( datacase, dataDir, varargin )
+function [kTraj,fVals,N,psfMask,phantImg] = getDatacase( datacase, dataDir )
   % [kTraj,fVals,N,psfMask] = getDatacase( datacase )
   %
-  % datacase 0 is a simulation of NickPhantom
+  % datacase 0 is a simulation of NickPhantom with radial trajectory
+  %
+  % Written by Nicholas Dwork - Copyright 2017
 
-  psfMask = [];
+  phantImg = [];
 
   switch datacase
 
     case 0
-      % Simulated data of NickPhantom
-      [fVals,phantImg] = makeNickPhantom( kTraj );                               %#ok<ASGLU>
+      % Simulated data of NickPhantom with propeller trajectory
+      nReadout = 200;
+      nLines = 11;
+      dkLine = 0.1;
+      nAngles = 60;
+      kTraj = makeTrajPts( 2, 'propeller', nReadout, nLines, dkLine, nAngles );
+      %nSpokes = 400;
+      %nPtsPerSpoke = 100;
+      %kTraj = makeTrajPts( 2, 'radial', nSpokes, nPtsPerSpoke );
+      [fVals,phantImg] = makeNickPhantom( kTraj );
       N = [256, 256];
       psfMask = ones(2*N);
 
     case 1
+      % Simulated data of NickPhantom with radial trajectory
+      nSpokes = 400;
+      nPtsPerSpoke = 100;
+      kTraj = makeTrajPts( 2, 'radial', nSpokes, nPtsPerSpoke );
+      [fVals,phantImg] = makeNickPhantom( kTraj );
+      N = [256, 256];
+      psfMask = ones(2*N);
+      
+    case 2
+      % Simulated data of NickPhantom with rosette trajectory
+      f1 = 147;
+      f2 = 20;
+      nK = 50000;
+      dt = 0.001;
+      kTraj = makeTrajPts( 2, 'rosette', nK, dt, f1, f2 );
+      [fVals,phantImg] = makeNickPhantom( kTraj );
+      N = [256, 256];
+      psfMask = ones(2*N);
+      
+    case 3
       dataFile = 'data_2drad_test.mat';
       load( [dataDir dataFile] );
       ds = 4;  % Downsample factor
@@ -30,7 +60,7 @@ function [kTraj,fVals,N,psfMask] = getDatacase( datacase, dataDir, varargin )
       radImg = makeRadialImg( 2*N );
       psfMask = abs(radImg) < min(N);
 
-    case 2
+    case 4
       dataFile = 'data_2dspiralNav.mat';
       load( [dataDir dataFile] );
       sData = size( d );
@@ -49,7 +79,7 @@ function [kTraj,fVals,N,psfMask] = getDatacase( datacase, dataDir, varargin )
       N = [ 150 150 ];
       psfMask = ones(2*N);
 
-    case 3
+    case 5
       dataFile = 'propeller_phantom_2015_11_05.mat';
       load( [dataDir dataFile] );
 
@@ -70,5 +100,5 @@ function [kTraj,fVals,N,psfMask] = getDatacase( datacase, dataDir, varargin )
       psfMask = abs(radImg) < min(N);
   end
 
-  %figure; scatter( kTraj(:,1), kTraj(:,2), 8, 'k', 'filled' );
+  %figure; scatter( kTraj(:,1), kTraj(:,2), 4, 'k', 'filled' );  axis('equal');
 end
